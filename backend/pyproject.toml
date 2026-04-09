@@ -1,0 +1,9 @@
+[project]
+name = "libris-backend"
+version = "0.1.0"
+description = "Backend API for Libris"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+]

@@ -1,0 +1,9 @@
+{
+  "name": "libris-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "echo 'build placeholder' && mkdir -p dist && echo 'Frontend placeholder' > dist/index.html",
+    "lint": "echo 'lint placeholder'"
+  }
+}
