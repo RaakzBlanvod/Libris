@@ -7,14 +7,12 @@ services:
     restart: unless-stopped
     ports:
       - "5433:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-libris}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-libris}
-      POSTGRES_DB: ${POSTGRES_DB:-libris}
+    env_file:
+      - ./backend/.env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-libris}"]
+      test: ["CMD-SHELL", "pg_isready -U libris"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -39,9 +37,8 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-libris}:${POSTGRES_PASSWORD:-libris}@postgres:5432/${POSTGRES_DB:-libris}
-      REDIS_URL: redis://redis:6379/0
+    env_file:
+      - ./backend/.env
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,6 +55,8 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+    env_file:
+      - ./frontend/.env
     depends_on:
       - backend
 

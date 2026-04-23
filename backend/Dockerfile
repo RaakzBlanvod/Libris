@@ -2,20 +2,18 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Установка системных зависимостей (curl нужен для установки uv)
+# Установка системных зависимостей
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Установка uv
-ADD https://astral.sh/uv/install.sh /uv-installer.sh
-RUN sh /uv-installer.sh && rm /uv-installer.sh
-ENV PATH="/root/.local/bin:$PATH"
+# Установка uv через pip (надёжнее, чем ADD)
+RUN pip install uv
 
 # Копирование файлов зависимостей
 COPY pyproject.toml uv.lock* ./
 
-# Установка зависимостей через uv (если есть pyproject.toml)
+# Установка зависимостей через uv
 RUN if [ -f pyproject.toml ]; then uv pip install --system -r pyproject.toml; fi
 
 # Копирование исходного кода
