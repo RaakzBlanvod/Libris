@@ -20,4 +20,4 @@ RUN if [ -f pyproject.toml ]; then uv pip install --system -r pyproject.toml; fi
 COPY . .
 
 # Запуск
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
