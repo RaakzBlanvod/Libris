@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.modules.users.routers import router as users_router
+
 app = FastAPI(title="Libris API")
 
 # Настройка CORS, чтобы фронтенд мог достучаться до бэкенда
@@ -16,8 +18,6 @@ app.add_middleware(
     allow_headers=["*"],  # Разрешаем любые заголовки
 )
 
-# Сюда добавлять роутеры:
-
 
 @app.get("/health")
 def health():
@@ -27,6 +27,10 @@ def health():
 @app.get("/")
 async def root():
     return {"message": "Welcome to Libris API"}
+
+
+# Сюда добавлять роутеры:
+app.include_router(users_router, prefix="/api/v1")
 
 
 # Блок для запуска через `python src/main.py`

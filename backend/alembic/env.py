@@ -16,6 +16,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.core.config import settings
 from src.core.database import Base
 
+# Импортируем модели для того, чтобы Alembic их увидел при генерации миграций
+from src.modules.users.models import User  # noqa: F401
+
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
