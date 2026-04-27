@@ -16,7 +16,7 @@ COPY pyproject.toml uv.lock* ./
 # Установка зависимостей через uv
 RUN if [ -f pyproject.toml ]; then uv pip install --system -r pyproject.toml; fi
 
-# Копирование исходного кода
+# Копирование исходного кодаs
 COPY . .
 
 # Запуск
