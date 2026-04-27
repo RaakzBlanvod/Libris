@@ -30,3 +30,14 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class UserUpdate(BaseModel):
+    username: str | None = Field(None, min_length=3, max_length=50)
+    email: EmailStr | None = None
+    password: str | None = Field(None, min_length=8, max_length=72)
+
+    # Этого в модели пока нет, надо ещё полей будет добавить, когда придумаем, что нужно юзеру.
+    # Например, библиотека (списки книг), которую нужно будет вынести в отдельную таблицу.
+    # bio: str | None = Field(None, max_length=500)
+    # avatar_url: str | None = None
