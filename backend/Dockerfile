@@ -7,17 +7,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Установка uv через pip (надёжнее, чем ADD)
+# Установка uv
 RUN pip install uv
 
 # Копирование файлов зависимостей
-COPY pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock ./
 
-# Установка зависимостей через uv
-RUN if [ -f pyproject.toml ]; then uv pip install --system -r pyproject.toml; fi
+# Установка зависимостей через uv (создаст .venv в /app/.venv)
+RUN uv sync --frozen --no-dev
 
-# Копирование исходного кодаs
+# Копирование исходного кода
 COPY . .
 
-# Запуск
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Даём права на исполнение стартового скрипта
+RUN chmod +x start.sh
+
+# Запуск: сначала миграции, потом приложение
+CMD ["bash", "start.sh"] 
