@@ -12,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U libris"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-libris} -d ${POSTGRES_DB:-libris_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -46,6 +46,11 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build:
@@ -58,7 +63,8 @@ services:
     env_file:
       - ./frontend/.env
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:
