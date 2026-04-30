@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.modules.users.routers import router as users_router
+from src.modules.books.routers import router as books_router
+from src.modules.reviews.routers import router as reviews_router
+from src.modules.bookmarks.routers import router as bookmarks_router
 
 app = FastAPI(title="Libris API")
 
@@ -31,6 +34,9 @@ async def root():
 
 # Сюда добавлять роутеры:
 app.include_router(users_router, prefix="/api/v1")
+app.include_router(books_router, prefix="/api/v1")
+app.include_router(reviews_router, prefix="/api/v1")
+app.include_router(bookmarks_router, prefix="/api/v1")
 
 
 # Блок для запуска через `python src/main.py`
