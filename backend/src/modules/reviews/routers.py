@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from src.core.deps import get_db, get_current_user
+from src.core.database import get_db
+from src.modules.auth.deps import get_current_user
 from src.modules.users.models import User
 from . import schemas
 from .services import ReviewService

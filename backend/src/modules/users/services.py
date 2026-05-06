@@ -1,8 +1,15 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func
+import os
+import uuid
 
 from src.modules.users.models import User
-from src.modules.users.schemas import UserCreate, UserUpdate
+from src.modules.users.schemas import UserCreate, UserUpdate, UserRead
+from src.modules.reviews.models import Review
+from src.modules.bookmarks.models import Bookmark
+from src.modules.bookmarks.schemas import BookmarkStatus
+
 from src.core.security import get_password_hash, verify_password
 
 
@@ -49,29 +56,6 @@ class UserService:
         return db_user
 
     @staticmethod
-    async def authenticate_user(db: AsyncSession, email: str, password: str) -> User:
-        """
-        Аутентифицирует пользователя по email и паролю.
-
-        Args:
-            db: Асинхронная сессия базы данных.
-            email: Email пользователя.
-            password: Пароль пользователя.
-
-        Returns:
-            Пользователь, если аутентификация прошла успешно.
-
-        Raises:
-            ValueError: Если email или пароль неверны.
-        """
-        user = await get_user_by_email(db, email=email)
-        if not user:
-            raise ValueError("User not found")
-        if not verify_password(password, user.hashed_password):
-            raise ValueError("Invalid password")
-        return user
-
-    @staticmethod
     async def update_user(db: AsyncSession, user: User, user_in: UserUpdate) -> User:
         """
         Частично обновляет данные пользователя, обновляя только переданные поля.
@@ -114,8 +98,6 @@ class UserService:
         for key, value in update_data.items():
             setattr(user, key, value)
 
-        # TODO: Добавить поля bio и avatar_url в модель User, когда они потребуются
-
         await db.commit()
         await db.refresh(user)
         return user
@@ -124,13 +106,76 @@ class UserService:
     async def delete_user(db: AsyncSession, user: User) -> None:
         """
         Удаляет пользователя из базы данных.
-
-        Args:
-            db: Асинхронная сессия базы данных.
-            user: Пользователь, которого нужно удалить.
-
-        Returns:
-            None
         """
         await db.delete(user)
         await db.commit()
+
+    @staticmethod
+    async def get_user_profile(db: AsyncSession, user_id: int):
+
+        reviews_subq = (
+            select(func.count(Review.id))
+            .where(Review.user_id == user_id)
+            .scalar_subquery()
+        )
+
+        bookmarks_subq = (
+            select(func.count(Bookmark.id))
+            .where(
+                (Bookmark.user_id == user_id)
+                & (Bookmark.status == BookmarkStatus.FINISHED)
+            )
+            .scalar_subquery()
+        )
+
+        stmt = select(
+            User,
+            reviews_subq.label("reviews_count"),
+            bookmarks_subq.label("read_books_count"),
+        ).where(User.id == user_id)
+
+        result = await db.execute(stmt)
+        row = result.first()
+        if not row:
+            raise ValueError("User not found")
+
+        user, reviews_count, read_books_count = row
+
+        return UserRead(
+            id=user.id,
+            username=user.username,
+            bio=user.bio,
+            avatar=user.avatar,
+            favorite_genres=user.favorite_genres,
+            reviews_count=reviews_count or 0,
+            read_books_count=read_books_count or 0,
+        )
+
+    @staticmethod
+    async def upload_avatar(db: AsyncSession, user: User, file) -> str:
+
+        ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
+        MAX_SIZE = 5 * 1024 * 1024  # 5 MB
+
+        if file.content_type not in ALLOWED_TYPES:
+            raise ValueError("Разрешены только форматы JPEG, PNG или WEBP")
+
+        file_bytes = await file.read()
+        if len(file_bytes) > MAX_SIZE:
+            raise ValueError("Размер файла не должен превышать 5 МБ")
+
+        os.makedirs("src/static/avatars", exist_ok=True)
+
+        ext = file.filename.split(".")[-1] if "." in file.filename else "png"
+        filename = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join("src/static/avatars", filename)
+
+        with open(filepath, "wb") as out_file:
+            out_file.write(file_bytes)
+
+        avatar_url = f"/static/avatars/{filename}"
+        user.avatar = avatar_url
+        await db.commit()
+        await db.refresh(user)
+
+        return avatar_url

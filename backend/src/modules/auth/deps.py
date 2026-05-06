@@ -6,8 +6,7 @@ from src.core.database import get_db
 from src.core.config import settings
 from src.modules.users.services import get_user_by_email
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/users/login")
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 async def get_current_user(
     db: AsyncSession = Depends(get_db), token: str = Depends(oauth2_scheme)
@@ -22,7 +21,10 @@ async def get_current_user(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         email: str = payload.get("sub")
-        if email is None:
+        token_type: str = payload.get("type")
+        
+        # Проверка, что это именно access токен
+        if email is None or token_type != "access":
             raise credentials_exception
     except jwt.PyJWTError:
         raise credentials_exception

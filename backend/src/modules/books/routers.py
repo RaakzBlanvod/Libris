@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 import httpx
 
-from src.core.deps import get_db
+from src.core.database import get_db
 from src.modules.books import schemas
 from src.modules.books.services import BookService
 

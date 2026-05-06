@@ -10,7 +10,7 @@ from src.modules.bookmarks.schemas import (
 )
 from src.modules.bookmarks.services import BookmarkService
 from src.modules.users.models import User
-from src.core.deps import get_current_user
+from src.modules.auth.deps import get_current_user
 
 router = APIRouter(prefix="/bookmarks", tags=["Bookmarks"])
 
