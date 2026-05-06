@@ -42,7 +42,7 @@ class ReviewService:
             review_in.pacing_rating,
             review_in.world_rating,
         ]
-        overall = sum(ratings) / len(ratings)
+        overall = sum(ratings) / 5.0
 
         # 3. Создание отзыва
         new_review = Review(
@@ -136,6 +136,8 @@ class ReviewService:
         if review.user_id != user_id:
             raise ValueError("Вы не можете редактировать чужой отзыв")
 
+        old_overall_rating = review.overall_rating
+
         # Обновляем поля
         update_data = review_in.model_dump(exclude_unset=True)
         for key, value in update_data.items():
@@ -149,13 +151,28 @@ class ReviewService:
             review.pacing_rating,
             review.world_rating,
         ]
-        review.overall_rating = round(sum(ratings) / len(ratings), 2)
+        new_overall_rating = round(sum(ratings) / 5.0, 2)
+        review.overall_rating = new_overall_rating
+
+        # Обновляем рейтинг книги, если он изменился
+        if old_overall_rating != new_overall_rating:
+            book_stmt = select(Book).where(Book.id == review.book_id)
+            book_res = await db.execute(book_stmt)
+            book = book_res.scalar_one_or_none()
+            if book and book.reviews_count > 0:
+                old_sum = book.average_rating * book.reviews_count
+                new_sum = old_sum - old_overall_rating + new_overall_rating
+                book.average_rating = round(new_sum / book.reviews_count, 2)
 
         await db.commit()
 
-        # Загружаем с пользователем для ответа
-        await db.refresh(review, attribute_names=["user"])
-        return review
+        stmt_refresh = (
+            select(Review)
+            .where(Review.id == review.id)
+            .options(selectinload(Review.user))
+        )
+        res_refresh = await db.execute(stmt_refresh)
+        return res_refresh.scalar_one()
 
     @staticmethod
     async def delete_review(db: AsyncSession, review_id: int, user_id: int) -> None:

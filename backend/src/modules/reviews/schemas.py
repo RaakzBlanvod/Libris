@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Optional
-
 from pydantic import BaseModel, ConfigDict, Field
+
+from src.modules.users.schemas import UserShortResponse
 
 
 class ReviewBase(BaseModel):
@@ -9,14 +10,14 @@ class ReviewBase(BaseModel):
     Базовая схема для рецензий с общими полями.
     """
 
-    # Оценки (обязательно 1-5)
-    plot_rating: int = Field(..., ge=1, le=5, description="Оценка сюжета")
-    characters_rating: int = Field(..., ge=1, le=5, description="Оценка персонажей")
-    style_rating: int = Field(..., ge=1, le=5, description="Оценка стиля и слога")
+    # Оценки (обязательно 1-10)
+    plot_rating: int = Field(..., ge=1, le=10, description="Оценка сюжета")
+    characters_rating: int = Field(..., ge=1, le=10, description="Оценка персонажей")
+    style_rating: int = Field(..., ge=1, le=10, description="Оценка стиля и слога")
     pacing_rating: int = Field(
-        ..., ge=1, le=5, description="Оценка темпа повествования"
+        ..., ge=1, le=10, description="Оценка темпа повествования"
     )
-    world_rating: int = Field(..., ge=1, le=5, description="Оценка мироустройства")
+    world_rating: int = Field(..., ge=1, le=10, description="Оценка мироустройства")
 
     # Текстовые обоснования (обязательные)
     plot_text: str = Field(..., min_length=10, description="Обоснование оценки сюжета")
@@ -45,11 +46,11 @@ class ReviewUpdate(BaseModel):
     Схема для частичного обновления рецензии. Все поля опциональны.
     """
 
-    plot_rating: Optional[int] = Field(None, ge=1, le=5)
-    characters_rating: Optional[int] = Field(None, ge=1, le=5)
-    style_rating: Optional[int] = Field(None, ge=1, le=5)
-    pacing_rating: Optional[int] = Field(None, ge=1, le=5)
-    world_rating: Optional[int] = Field(None, ge=1, le=5)
+    plot_rating: Optional[int] = Field(None, ge=1, le=10)
+    characters_rating: Optional[int] = Field(None, ge=1, le=10)
+    style_rating: Optional[int] = Field(None, ge=1, le=10)
+    pacing_rating: Optional[int] = Field(None, ge=1, le=10)
+    world_rating: Optional[int] = Field(None, ge=1, le=10)
 
     plot_text: Optional[str] = Field(None, min_length=10)
     characters_text: Optional[str] = Field(None, min_length=10)
@@ -66,8 +67,7 @@ class ReviewResponse(ReviewBase):
     """
 
     id: int
-    user_id: int
-    username: str  # Надо поменять на ссылку на пользователя (поменять схему User в users)
+    user: UserShortResponse
     overall_rating: float
     created_at: datetime
     updated_at: datetime
@@ -75,11 +75,18 @@ class ReviewResponse(ReviewBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class BookShortTitleResponse(BaseModel):
+    """
+    Краткая информация о книге для вложенных схем.
+    """
+    id: int
+    title: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class MyReviewResponse(ReviewResponse):
     """
-    Схема для страницы 'Мои рецензии'. Добавляет название книги.
+    Схема для страницы 'Мои рецензии'. Включает краткую информацию о книге.
     """
-
-    book_title: str
-    # Здесь можно добавить book_id, если фронту нужно делать ссылку на книгу
-    book_id: int
+    book: BookShortTitleResponse

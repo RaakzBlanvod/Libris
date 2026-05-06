@@ -1,43 +1,87 @@
-from pydantic import BaseModel, EmailStr, ConfigDict, Field
+from typing import List, Optional
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 
 
-# Базовая схема с общими полями
 class UserBase(BaseModel):
+    """
+    Базовая схема пользователя с общими полями.
+    """
+
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=50)
 
 
-# Схема для регистрации
 class UserCreate(UserBase):
+    """
+    Схема для регистрации нового пользователя.
+    Добавляет поле пароля к базовой схеме.
+    """
+
     password: str = Field(..., min_length=8, max_length=72)
 
 
-# Схема для ответа без пароля
-class UserResponse(UserBase):
-    id: int
-    is_active: bool
+class UserShortResponse(BaseModel):
+    """
+    Краткая информация о пользователе (для вложенных ответов, например, в рецензиях).
+    """
 
-    # Для работы pydantic с orm
+    id: int
+    username: str
+    avatar: str | None = None
+
+    @field_validator("avatar", mode="before")
+    @classmethod
+    def set_default_avatar(cls, v: Optional[str]) -> str:
+        return v if v else "/static/avatars/default.png"
+
     model_config = ConfigDict(from_attributes=True)
 
 
-# Схема для логина, получение токена
-class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+class UserRead(BaseModel):
+    """
+    Схема для просмотра чужого профиля и своего.
+    Не содержит email.
+    """
+
+    id: int
+    username: str
+    bio: str | None = None
+    avatar: str | None = None
+    favorite_genres: List[str] | None = None
+    reviews_count: int = 0
+    read_books_count: int = 0
+
+    @field_validator("avatar", mode="before")
+    @classmethod
+    def set_default_avatar(cls, v: Optional[str]) -> str:
+        return v if v else "/static/avatars/default.png"
+
+    model_config = ConfigDict(from_attributes=True)
 
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+class UserResponse(UserBase):
+    """
+    Схема для ответа пользователю с его данными.
+    Не содержит пароля.
+    """
+
+    id: int
+    is_active: bool
+    avatar: str | None = None
+
+    @field_validator("avatar", mode="before")
+    @classmethod
+    def set_default_avatar(cls, v: Optional[str]) -> str:
+        return v if v else "/static/avatars/default.png"
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserUpdate(BaseModel):
-    username: str | None = Field(None, min_length=3, max_length=50)
-    email: EmailStr | None = None
-    password: str | None = Field(None, min_length=8, max_length=72)
+    """
+    Схема для обновления данных профиля пользователя (PATCH /me).
+    """
 
-    # Этого в модели пока нет, надо ещё полей будет добавить, когда придумаем, что нужно юзеру.
-    # Например, библиотека (списки книг), которую нужно будет вынести в отдельную таблицу.
-    # bio: str | None = Field(None, max_length=500)
-    # avatar_url: str | None = None
+    username: str | None = Field(None, min_length=3, max_length=50)
+    bio: str | None = Field(None, max_length=1024)
+    favorite_genres: List[str] | None = None

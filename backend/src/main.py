@@ -1,12 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
+from src.modules.auth.routers import router as auth_router
 from src.modules.users.routers import router as users_router
 from src.modules.books.routers import router as books_router
 from src.modules.reviews.routers import router as reviews_router
 from src.modules.bookmarks.routers import router as bookmarks_router
 
+import os
+os.makedirs("src/static/avatars", exist_ok=True)
+
 app = FastAPI(title="Libris API")
+app.mount("/static", StaticFiles(directory="src/static"), name="static")
 
 # Настройка CORS, чтобы фронтенд мог достучаться до бэкенда
 app.add_middleware(
@@ -33,6 +39,7 @@ async def root():
 
 
 # Сюда добавлять роутеры:
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(books_router, prefix="/api/v1")
 app.include_router(reviews_router, prefix="/api/v1")
