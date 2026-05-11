@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
 from src.core.database import get_db
-from src.modules.auth.deps import get_current_user
+from src.modules.auth.deps import get_current_user, get_current_user_optional
 from src.modules.users.models import User
 from . import schemas
 from .services import ReviewService
@@ -28,12 +28,13 @@ async def create_review(
 @router.get("/book/{book_id}", response_model=List[schemas.ReviewResponse])
 async def get_book_reviews(
     book_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional)
 ):
     """
     Получить все отзывы к конкретной книге.
     """
-    return await ReviewService.get_book_reviews(db, book_id)
+    return await ReviewService.get_book_reviews(db, book_id, current_user.id if current_user else None)
 
 
 @router.get("/my", response_model=List[schemas.MyReviewResponse])
@@ -71,3 +72,15 @@ async def delete_review(
         await ReviewService.delete_review(db, review_id, current_user.id)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.post("/{review_id}/like")
+async def like_review(
+    review_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return await ReviewService.toggle_like(db, current_user.id, review_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

@@ -1,8 +1,9 @@
-from sqlalchemy import select
+from sqlalchemy import select, func, false
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
 
-from .models import Review
+from .models import Review, ReviewLike
 from .schemas import ReviewCreate, ReviewUpdate
 from src.modules.books.models import Book
 
@@ -78,49 +79,88 @@ class ReviewService:
             .options(selectinload(Review.user))
         )
         result = await db.execute(stmt)
-        return result.scalar_one()
+        review = result.scalar_one()
+        review.like_count = 0
+        review.is_liked = False
+        return review
 
     @staticmethod
-    async def get_book_reviews(db: AsyncSession, book_id: int) -> list[Review]:
-        """
-        Получает список всех рецензий для конкретной книги.
+    async def get_book_reviews(
+        db: AsyncSession, book_id: int, current_user_id: int | None = None
+    ) -> list[Review]:
 
-        Args:
-            db: асинхронная сессия
-            book_id: id книги
+        like_count_subq = (
+            select(func.count(ReviewLike.user_id))
+            .where(ReviewLike.review_id == Review.id)
+            .scalar_subquery()
+            .label("like_count")
+        )
 
-        Returns:
-            list[Review]: список отзывов с данными пользователей
-        """
+        if current_user_id:
+            is_liked_subq = (
+                select(ReviewLike.user_id)
+                .where(
+                    ReviewLike.review_id == Review.id,
+                    ReviewLike.user_id == current_user_id,
+                )
+                .exists()
+                .correlate(Review)
+                .label("is_liked")
+            )
+        else:
+            is_liked_subq = false().label("is_liked")
+
         stmt = (
-            select(Review)
+            select(Review, like_count_subq, is_liked_subq)
             .where(Review.book_id == book_id)
             .options(selectinload(Review.user))
             .order_by(Review.created_at.desc())
         )
         result = await db.execute(stmt)
-        return result.scalars().all()
+
+        reviews = []
+        for row in result.all():
+            review, like_count, is_liked = row
+            review.like_count = like_count
+            review.is_liked = is_liked
+            reviews.append(review)
+
+        return reviews
 
     @staticmethod
     async def get_my_reviews(db: AsyncSession, user_id: int) -> list[Review]:
-        """
-        Получает все рецензии текущего пользователя.
 
-        Args:
-            db: асинхронная сессия
-            user_id: id пользователя
+        like_count_subq = (
+            select(func.count(ReviewLike.user_id))
+            .where(ReviewLike.review_id == Review.id)
+            .scalar_subquery()
+            .label("like_count")
+        )
 
-        Returns:
-            list[Review]: список отзывов с данными книг
-        """
+        is_liked_subq = (
+            select(ReviewLike.user_id)
+            .where(ReviewLike.review_id == Review.id, ReviewLike.user_id == user_id)
+            .exists()
+            .correlate(Review)
+            .label("is_liked")
+        )
+
         stmt = (
-            select(Review)
+            select(Review, like_count_subq, is_liked_subq)
             .where(Review.user_id == user_id)
             .options(selectinload(Review.book))
             .order_by(Review.created_at.desc())
         )
         result = await db.execute(stmt)
-        return result.scalars().all()
+
+        reviews = []
+        for row in result.all():
+            review, like_count, is_liked = row
+            review.like_count = like_count
+            review.is_liked = is_liked
+            reviews.append(review)
+
+        return reviews
 
     @staticmethod
     async def update_review(
@@ -166,13 +206,35 @@ class ReviewService:
 
         await db.commit()
 
+        like_count_subq = (
+            select(func.count(ReviewLike.user_id))
+            .where(ReviewLike.review_id == Review.id)
+            .scalar_subquery()
+            .label("like_count")
+        )
+
+        is_liked_subq = (
+            select(ReviewLike.user_id)
+            .where(ReviewLike.review_id == Review.id, ReviewLike.user_id == user_id)
+            .exists()
+            .correlate(Review)
+            .label("is_liked")
+        )
+
         stmt_refresh = (
-            select(Review)
+            select(Review, like_count_subq, is_liked_subq)
             .where(Review.id == review.id)
             .options(selectinload(Review.user))
         )
         res_refresh = await db.execute(stmt_refresh)
-        return res_refresh.scalar_one()
+        
+        row = res_refresh.one() 
+        
+        updated_review = row.Review
+        updated_review.like_count = row.like_count or 0
+        updated_review.is_liked = row.is_liked or False
+        
+        return updated_review
 
     @staticmethod
     async def delete_review(db: AsyncSession, review_id: int, user_id: int) -> None:
@@ -209,3 +271,27 @@ class ReviewService:
             book.reviews_count = new_total_count
 
             await db.commit()
+
+    @staticmethod
+    async def toggle_like(
+        db: AsyncSession, user_id: int, review_id: int
+    ) -> dict[str, bool]:
+        stmt = select(ReviewLike).where(
+            ReviewLike.review_id == review_id, ReviewLike.user_id == user_id
+        )
+        result = await db.execute(stmt)
+        existing_like = result.scalar_one_or_none()
+
+        if existing_like:
+            await db.delete(existing_like)
+            await db.commit()
+            return {"is_liked": False}
+        else:
+            new_like = ReviewLike(review_id=review_id, user_id=user_id)
+            db.add(new_like)
+            try:
+                await db.commit()
+                return {"is_liked": True}
+            except IntegrityError:
+                await db.rollback()
+                raise ValueError("Рецензия не найдена")

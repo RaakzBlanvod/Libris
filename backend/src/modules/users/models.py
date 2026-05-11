@@ -5,9 +5,10 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database import Base, intpk, created_at, updated_at
+
 if TYPE_CHECKING:
     from src.modules.bookmarks.models import Bookmark
-    from src.modules.reviews.models import Review
+    from src.modules.reviews.models import Review, ReviewLike
 
 
 class User(Base):
@@ -24,7 +25,9 @@ class User(Base):
     )
     avatar: Mapped[str | None] = mapped_column(String(length=1024), nullable=True)
     bio: Mapped[str | None] = mapped_column(String(length=1024), nullable=True)
-    favorite_genres: Mapped[list[str] | None] = mapped_column(ARRAY(String(length=100)), nullable=True)
+    favorite_genres: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String(length=100)), nullable=True
+    )
 
     created_at: Mapped[created_at]
     updated_at: Mapped[updated_at]
@@ -34,6 +37,10 @@ class User(Base):
     )
     reviews: Mapped[List["Review"]] = relationship(
         "Review", back_populates="user", cascade="all, delete-orphan"
+    )
+
+    review_likes: Mapped[List["ReviewLike"]] = relationship(
+        "ReviewLike", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
