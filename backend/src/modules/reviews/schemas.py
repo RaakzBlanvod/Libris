@@ -69,6 +69,8 @@ class ReviewResponse(ReviewBase):
     id: int
     user: UserShortResponse
     overall_rating: float
+    like_count: int = 0
+    is_liked: bool
     created_at: datetime
     updated_at: datetime
 

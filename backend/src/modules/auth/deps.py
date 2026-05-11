@@ -34,3 +34,29 @@ async def get_current_user(
         raise credentials_exception
 
     return user
+
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+
+async def get_current_user_optional(
+    db: AsyncSession = Depends(get_db), token: str | None = Depends(oauth2_scheme_optional)
+):
+    if not token:
+        return None
+        
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        email: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        
+        if email is None or token_type != "access":
+            return None
+    except jwt.PyJWTError:
+        return None
+
+    user = await get_user_by_email(db, email=email)
+    if user is None:
+        return None
+
+    return user
