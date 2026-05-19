@@ -38,7 +38,7 @@ class ReviewCreate(ReviewBase):
     Схема для создания новой рецензии.
     """
 
-    book_id: int = Field(..., description="Внутренний ID книги в нашей БД")
+    pass
 
 
 class ReviewUpdate(BaseModel):
@@ -81,6 +81,7 @@ class BookShortTitleResponse(BaseModel):
     """
     Краткая информация о книге для вложенных схем.
     """
+
     id: int
     title: str
 
@@ -91,4 +92,5 @@ class MyReviewResponse(ReviewResponse):
     """
     Схема для страницы 'Мои рецензии'. Включает краткую информацию о книге.
     """
+
     book: BookShortTitleResponse

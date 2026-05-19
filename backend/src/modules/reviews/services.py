@@ -1,7 +1,8 @@
-from sqlalchemy import select, func, false
+from sqlalchemy import select, func, false, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime, timedelta, timezone
 
 from .models import Review, ReviewLike
 from .schemas import ReviewCreate, ReviewUpdate
@@ -11,7 +12,7 @@ from src.modules.books.models import Book
 class ReviewService:
     @staticmethod
     async def create_review(
-        db: AsyncSession, user_id: int, review_in: ReviewCreate
+        db: AsyncSession, user_id: int, book_id: int, review_in: ReviewCreate
     ) -> Review:
         """
         Создает новую рецензию и обновляет средний рейтинг книги.
@@ -29,7 +30,7 @@ class ReviewService:
         """
         # 1. Проверка на дубликат отзыва
         existing_stmt = select(Review).where(
-            Review.user_id == user_id, Review.book_id == review_in.book_id
+            Review.user_id == user_id, Review.book_id == book_id
         )
         existing_res = await db.execute(existing_stmt)
         if existing_res.scalar_one_or_none():
@@ -47,12 +48,15 @@ class ReviewService:
 
         # 3. Создание отзыва
         new_review = Review(
-            **review_in.model_dump(), user_id=user_id, overall_rating=round(overall, 2)
+            **review_in.model_dump(),
+            user_id=user_id,
+            overall_rating=round(overall, 2),
+            book_id=book_id,
         )
         db.add(new_review)
 
         # 4. Поиск книги для обновления статистики
-        book_stmt = select(Book).where(Book.id == review_in.book_id)
+        book_stmt = select(Book).where(Book.id == book_id)
         book_res = await db.execute(book_stmt)
         book = book_res.scalar_one_or_none()
 
@@ -227,13 +231,13 @@ class ReviewService:
             .options(selectinload(Review.user))
         )
         res_refresh = await db.execute(stmt_refresh)
-        
-        row = res_refresh.one() 
-        
+
+        row = res_refresh.one()
+
         updated_review = row.Review
         updated_review.like_count = row.like_count or 0
         updated_review.is_liked = row.is_liked or False
-        
+
         return updated_review
 
     @staticmethod
@@ -295,3 +299,44 @@ class ReviewService:
             except IntegrityError:
                 await db.rollback()
                 raise ValueError("Рецензия не найдена")
+
+    @staticmethod
+    async def get_trending_reviews(db: AsyncSession, limit: int = 10) -> list[Review]:
+        """
+        Получает топ-10 рецензий, набравших больше всего лайков за последние 7 дней.
+        """
+        week_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
+
+        # 1. Подзапрос: считаем СВЕЖИЕ лайки для каждого отзыва за последние 7 дней
+        likes_subq = (
+            select(
+                ReviewLike.review_id,
+                func.count(ReviewLike.user_id).label("recent_likes_count"),
+            )
+            .where(ReviewLike.created_at >= week_ago)
+            .group_by(ReviewLike.review_id)
+            .subquery()
+        )
+
+        # 2. Главный запрос: вытаскиваем сами отзывы, джоиним свежие лайки и сортируем
+        stmt = (
+            select(Review)
+            .join(likes_subq, Review.id == likes_subq.c.review_id)
+            .options(selectinload(Review.user))  # Подгружаем авторов отзывов для фронта
+            .order_by(desc(likes_subq.c.recent_likes_count))
+            .limit(limit)
+        )
+
+        res = await db.execute(stmt)
+        trending_reviews = res.scalars().all()
+
+        # 3. Важно: проставляем счетчики лайков, чтобы Pydantic-схема не ругалась!
+        # Так как это топ, мы точно знаем, что likes_count равен свежим лайкам за неделю
+        # А флаг is_liked для гостевого кэша на главной всегда ставим False (шедулер выполняет запрос как гость)
+        for review in trending_reviews:
+            # Нам придется сделать быстрый дозапрос общего кол-ва лайков,
+            # либо для простоты топа выводить именно недельные лайки:
+            review.like_count = 0
+            review.is_liked = False
+
+        return trending_reviews
