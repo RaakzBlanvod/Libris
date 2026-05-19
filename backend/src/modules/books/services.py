@@ -1,11 +1,16 @@
-import httpx
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
-from sqlalchemy import select
+
+import httpx
+
+from sqlalchemy import func, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.config import settings
 from .models import Book, Author, Genre
+from ..bookmarks.models import Bookmark
+from ..reviews.models import Review
 from .schemas import GoogleBookMetadata, BookShortResponse
 
 
@@ -26,7 +31,7 @@ class BookService:
         """
         if not query:
             raise ValueError("Запрос для поиска книг не был предоставлен.")
-            
+
         url = "https://www.googleapis.com/books/v1/volumes"
         params = {
             "q": query,
@@ -72,7 +77,7 @@ class BookService:
         """
         if not google_id:
             raise ValueError("Google Book ID не был предоставлен.")
-            
+
         url = f"https://www.googleapis.com/books/v1/volumes/{google_id}"
         params = {
             "key": settings.GOOGLE_BOOKS_API_KEY,
@@ -114,7 +119,7 @@ class BookService:
         """
         if not query:
             raise ValueError("Запрос для поиска книг не был предоставлен.")
-            
+
         google_results = await BookService._fetch_from_google(query, limit)
 
         # Собираем все google_id из результатов поиска
@@ -168,7 +173,7 @@ class BookService:
         """
         if not metadata:
             raise ValueError("Метаданные книги не были предоставлены.")
-            
+
         # 1. Ищем книгу
         stmt = select(Book).where(Book.google_id == metadata.google_id)
         result = await db.execute(stmt)
@@ -231,14 +236,70 @@ class BookService:
         """
         if not google_id:
             raise ValueError("Google Book ID не был предоставлен.")
-            
+
         stmt = (
             select(Book)
             .where(Book.google_id == google_id)
-            .options(
-                selectinload(Book.authors),
-                selectinload(Book.genres)
-            )
+            .options(selectinload(Book.authors), selectinload(Book.genres))
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_trending_books(db: AsyncSession, limit: int = 10) -> List[Book]:
+        """
+        Args:
+            db: Асинхронная сессия базы данных.
+            limit: Максимальное количество результатов.
+
+        Returns:
+            Список трендовых книг.
+
+        Raises:
+            ValueError: Если лимит не был предоставлен.
+        """
+        # Считаем границу времени (ровно 7 дней назад от текущего момента)
+        week_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
+
+        # 1. Подзапрос: считаем баллы за свежие рецензии (вес 3)
+        reviews_subq = (
+            select(Review.book_id, (func.count(Review.id) * 3).label("review_score"))
+            .where(Review.created_at >= week_ago)
+            .group_by(Review.book_id)
+            .subquery()
+        )
+
+        # 2. Подзапрос: считаем баллы за свежие закладки (вес 1)
+        bookmarks_subq = (
+            select(Bookmark.book_id, func.count(Bookmark.id).label("bookmark_score"))
+            .where(Bookmark.created_at >= week_ago)
+            .group_by(Bookmark.book_id)
+            .subquery()
+        )
+
+        # 3. Основной запрос: Собираем книги и складываем баллы
+        stmt = (
+            select(Book)
+            .outerjoin(reviews_subq, Book.id == reviews_subq.c.book_id)
+            .outerjoin(bookmarks_subq, Book.id == bookmarks_subq.c.book_id)
+            .options(selectinload(Book.authors))  # Подгружаем авторов для Pydantic
+            .where(
+                # Берем только те книги, у которых есть хоть какая-то активность за неделю
+                (
+                    func.coalesce(reviews_subq.c.review_score, 0)
+                    + func.coalesce(bookmarks_subq.c.bookmark_score, 0)
+                )
+                > 0
+            )
+            .order_by(
+                # Сортируем по сумме баллов по убыванию
+                desc(
+                    func.coalesce(reviews_subq.c.review_score, 0)
+                    + func.coalesce(bookmarks_subq.c.bookmark_score, 0)
+                )
+            )
+            .limit(limit)
+        )
+
+        result = await db.execute(stmt)
+        return result.scalars().all()
