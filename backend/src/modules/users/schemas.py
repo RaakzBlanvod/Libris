@@ -7,17 +7,20 @@ class UserBase(BaseModel):
     Базовая схема пользователя с общими полями.
     """
 
-    email: EmailStr
-    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr = Field(..., description="Электронная почта пользователя")
+    username: str = Field(
+        ..., min_length=3, max_length=50, description="Уникальное имя пользователя"
+    )
 
 
 class UserCreate(UserBase):
     """
     Схема для регистрации нового пользователя.
-    Добавляет поле пароля к базовой схеме.
     """
 
-    password: str = Field(..., min_length=8, max_length=72)
+    password: str = Field(
+        ..., min_length=8, max_length=72, description="Строгий пароль пользователя"
+    )
 
 
 class UserShortResponse(BaseModel):
@@ -25,9 +28,9 @@ class UserShortResponse(BaseModel):
     Краткая информация о пользователе (для вложенных ответов, например, в рецензиях).
     """
 
-    id: int
-    username: str
-    avatar: str | None = None
+    id: int = Field(..., description="Уникальный идентификатор пользователя")
+    username: str = Field(..., description="Имя пользователя")
+    avatar: str | None = Field(default=None, description="URL аватара пользователя")
 
     @field_validator("avatar", mode="before")
     @classmethod
@@ -39,17 +42,19 @@ class UserShortResponse(BaseModel):
 
 class UserRead(BaseModel):
     """
-    Схема для просмотра чужого профиля и своего.
-    Не содержит email.
+    Схема для просмотра публичного профиля пользователя.
+    Не содержит email и других приватных данных.
     """
 
-    id: int
-    username: str
-    bio: str | None = None
-    avatar: str | None = None
-    favorite_genres: List[str] | None = None
-    reviews_count: int = 0
-    read_books_count: int = 0
+    id: int = Field(..., description="Уникальный идентификатор пользователя")
+    username: str = Field(..., description="Имя пользователя")
+    bio: str | None = Field(default=None, description="Краткая информация о себе")
+    avatar: str | None = Field(default=None, description="URL аватара пользователя")
+    favorite_genres: List[str] | None = Field(
+        default=None, description="Любимые жанры пользователя"
+    )
+    reviews_count: int = Field(default=0, description="Количество написанных рецензий")
+    read_books_count: int = Field(default=0, description="Количество прочитанных книг")
 
     @field_validator("avatar", mode="before")
     @classmethod
@@ -61,13 +66,13 @@ class UserRead(BaseModel):
 
 class UserResponse(UserBase):
     """
-    Схема для ответа пользователю с его данными.
+    Схема для ответа авторизованному пользователю с его личными данными.
     Не содержит пароля.
     """
 
-    id: int
-    is_active: bool
-    avatar: str | None = None
+    id: int = Field(..., description="Уникальный идентификатор пользователя")
+    is_active: bool = Field(..., description="Флаг активности аккаунта")
+    avatar: str | None = Field(default=None, description="URL аватара пользователя")
 
     @field_validator("avatar", mode="before")
     @classmethod
@@ -82,6 +87,12 @@ class UserUpdate(BaseModel):
     Схема для обновления данных профиля пользователя (PATCH /me).
     """
 
-    username: str | None = Field(None, min_length=3, max_length=50)
-    bio: str | None = Field(None, max_length=1024)
-    favorite_genres: List[str] | None = None
+    username: str | None = Field(
+        default=None, min_length=3, max_length=50, description="Новое имя пользователя"
+    )
+    bio: str | None = Field(
+        default=None, max_length=1024, description="Новое описание профиля"
+    )
+    favorite_genres: List[str] | None = Field(
+        default=None, description="Обновленный список любимых жанров"
+    )

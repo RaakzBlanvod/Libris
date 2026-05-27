@@ -1,16 +1,15 @@
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func
 import os
 import uuid
 
-from src.modules.users.models import User
-from src.modules.users.schemas import UserCreate, UserUpdate, UserRead
-from src.modules.reviews.models import Review
-from src.modules.bookmarks.models import Bookmark
-from src.modules.bookmarks.schemas import BookmarkStatus
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import get_password_hash, verify_password
+from src.modules.bookmarks.models import Bookmark
+from src.modules.bookmarks.schemas import BookmarkStatus
+from src.modules.reviews.models import Review
+from src.modules.users.models import User
+from src.modules.users.schemas import UserCreate, UserUpdate, UserRead
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
@@ -31,19 +30,19 @@ class UserService:
 
         Args:
             db: Асинхронная сессия базы данных.
-            user_in: Объект UserCreate с новыми данными.
+            user_in: Схема UserCreate с новыми данными.
 
         Returns:
-            Созданный пользователь.
+            Созданный объект пользователя.
 
         Raises:
             ValueError: Если email/username уже существует.
         """
         if await get_user_by_email(db, email=user_in.email):
-            raise ValueError("Email already registered")
+            raise ValueError("Email уже используется.")
 
         if await get_user_by_username(db, username=user_in.username):
-            raise ValueError("Username already taken")
+            raise ValueError("Имя пользователя уже занято.")
 
         db_user = User(
             email=user_in.email,
@@ -63,10 +62,10 @@ class UserService:
         Args:
             db: Асинхронная сессия базы данных.
             user: Текущий пользователь, которого нужно обновить.
-            user_in: Объект UserUpdate с новыми данными (Возможные поля можно посмотреть в UserUpdate).
+            user_in: Схема UserUpdate с новыми данными.
 
         Returns:
-            Обновленный пользователь.
+            Обновленный объект пользователя.
 
         Raises:
             ValueError: Если email/username уже существует, или если пароль не был изменен.
@@ -74,25 +73,24 @@ class UserService:
         update_data = user_in.model_dump(exclude_unset=True)
 
         if not update_data:
-            # Если передано не было ни одного поля, возвращаем текущего юзера
             return user
 
         if "email" in update_data:
             existing_user = await get_user_by_email(db, email=update_data["email"])
             if existing_user and existing_user.id != user.id:
-                raise ValueError("Email already registered")
+                raise ValueError("Email уже используется.")
 
         if "username" in update_data:
             existing_user = await get_user_by_username(
                 db, username=update_data["username"]
             )
             if existing_user and existing_user.id != user.id:
-                raise ValueError("Username already taken")
+                raise ValueError("Имя пользователя уже занято.")
 
         if "password" in update_data:
             raw_password = update_data.pop("password")
             if verify_password(raw_password, user.hashed_password):
-                raise ValueError("Password is the same as the current password")
+                raise ValueError("Пароль совпадает с текущим.")
             update_data["hashed_password"] = get_password_hash(raw_password)
 
         for key, value in update_data.items():
@@ -106,13 +104,29 @@ class UserService:
     async def delete_user(db: AsyncSession, user: User) -> None:
         """
         Удаляет пользователя из базы данных.
+
+        Args:
+            db: Асинхронная сессия базы данных.
+            user: Пользователь, которого нужно удалить.
         """
         await db.delete(user)
         await db.commit()
 
     @staticmethod
-    async def get_user_profile(db: AsyncSession, user_id: int):
+    async def get_user_profile(db: AsyncSession, user_id: int) -> UserRead:
+        """
+        Получает профиль пользователя.
 
+        Args:
+            db: Асинхронная сессия базы данных.
+            user_id: ID пользователя.
+
+        Returns:
+            Профиль пользователя.
+
+        Raises:
+            ValueError: Если пользователь не найден.
+        """
         reviews_subq = (
             select(func.count(Review.id))
             .where(Review.user_id == user_id)
@@ -137,7 +151,7 @@ class UserService:
         result = await db.execute(stmt)
         row = result.first()
         if not row:
-            raise ValueError("User not found")
+            raise ValueError("Пользователь не найден.")
 
         user, reviews_count, read_books_count = row
 
@@ -153,7 +167,20 @@ class UserService:
 
     @staticmethod
     async def upload_avatar(db: AsyncSession, user: User, file) -> str:
+        """
+        Загружает аватар пользователя и сохраняет локально.
 
+        Args:
+            db: Асинхронная сессия базы данных.
+            user: Объект текущего пользователя.
+            file: Файл аватара.
+
+        Returns:
+            URL аватара.
+
+        Raises:
+            ValueError: Если тип файла не поддерживается или размер файла превышает 5 МБ.
+        """
         ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"]
         MAX_SIZE = 5 * 1024 * 1024  # 5 MB
 

@@ -18,6 +18,8 @@ class BookService:
     @staticmethod
     async def _fetch_from_google(query: str, limit: int) -> List[GoogleBookMetadata]:
         """
+        Выполняет поиск книг через Google Books API.
+
         Args:
             query: Запрос для поиска книг.
             limit: Максимальное количество результатов.
@@ -48,7 +50,6 @@ class BookService:
         books_metadata = []
         for item in data.get("items", []):
             v_info = item.get("volumeInfo", {})
-            # Собираем данные в нашу промежуточную схему
             books_metadata.append(
                 GoogleBookMetadata(
                     google_id=item.get("id"),
@@ -65,6 +66,8 @@ class BookService:
     @staticmethod
     async def _fetch_single_google_book(google_id: str) -> GoogleBookMetadata:
         """
+        Получает метаданные конкретной книги из Google Books API.
+
         Args:
             google_id: Google Book ID.
 
@@ -106,6 +109,8 @@ class BookService:
         db: AsyncSession, query: str, limit: int = 10
     ) -> List[BookShortResponse]:
         """
+        Ищет книги через Google Books API и возвращает результаты.
+
         Args:
             db: Асинхронная сессия базы данных.
             query: Запрос для поиска книг.
@@ -122,10 +127,8 @@ class BookService:
 
         google_results = await BookService._fetch_from_google(query, limit)
 
-        # Собираем все google_id из результатов поиска
         google_ids = [b.google_id for b in google_results]
 
-        # Одним запросом проверяем, какие из этих книг уже есть в нашей БД
         stmt = (
             select(Book)
             .where(Book.google_id.in_(google_ids))
@@ -137,20 +140,15 @@ class BookService:
         final_results = []
         for meta in google_results:
             if meta.google_id in existing_books:
-                # Если книга есть — отдаем её данные из БД (с нашим id)
                 db_book = existing_books[meta.google_id]
                 final_results.append(BookShortResponse.model_validate(db_book))
             else:
-                # Если книги нет — отдаем "сырые" данные, id будет None
-                # Нам нужно вручную собрать AuthorResponse для схемы
                 final_results.append(
                     BookShortResponse(
                         id=None,
                         google_id=meta.google_id,
                         title=meta.title,
-                        authors=[
-                            {"name": a} for a in meta.authors
-                        ],  # Заглушка для авторов
+                        authors=[{"name": a} for a in meta.authors],
                         cover_url=meta.thumbnail_url,
                     )
                 )
@@ -161,6 +159,8 @@ class BookService:
         db: AsyncSession, metadata: GoogleBookMetadata
     ) -> Book:
         """
+        Получает книгу из базы данных или создает новую.
+
         Args:
             db: Асинхронная сессия базы данных.
             metadata: Метаданные книги, полученные из Google Books API.
@@ -174,7 +174,6 @@ class BookService:
         if not metadata:
             raise ValueError("Метаданные книги не были предоставлены.")
 
-        # 1. Ищем книгу
         stmt = select(Book).where(Book.google_id == metadata.google_id)
         result = await db.execute(stmt)
         book = result.scalar_one_or_none()
@@ -182,10 +181,8 @@ class BookService:
         if book:
             return book
 
-        # 2. Обрабатываем авторов (чтобы не дублировать)
         author_objs = []
         for auth_name in metadata.authors:
-            # Ищем автора по имени
             a_stmt = select(Author).where(Author.name == auth_name)
             a_res = await db.execute(a_stmt)
             author = a_res.scalar_one_or_none()
@@ -195,7 +192,6 @@ class BookService:
                 db.add(author)
             author_objs.append(author)
 
-        # 3. Обрабатываем жанры
         genre_objs = []
         for genre_name in metadata.categories:
             g_stmt = select(Genre).where(Genre.name == genre_name)
@@ -207,7 +203,6 @@ class BookService:
                 db.add(genre)
             genre_objs.append(genre)
 
-        # 4. Создаем книгу
         new_book = Book(
             google_id=metadata.google_id,
             title=metadata.title,
@@ -215,8 +210,8 @@ class BookService:
             cover_url=metadata.thumbnail_url,
             page_count=metadata.page_count,
             isbn=metadata.isbn,
-            authors=author_objs,  # SQLAlchemy сама проставит связи в M2M таблице
-            genres=genre_objs,  # SQLAlchemy сама проставит связи в M2M таблице
+            authors=author_objs,
+            genres=genre_objs,
         )
 
         db.add(new_book)
@@ -227,12 +222,17 @@ class BookService:
     @staticmethod
     async def get_book_by_google_id(db: AsyncSession, google_id: str) -> Optional[Book]:
         """
+        Получает книгу по Google Book ID.
+
         Args:
             db: Асинхронная сессия базы данных.
             google_id: Google Book ID.
 
         Returns:
             Объект Book, найденный по Google Book ID.
+
+        Raises:
+            ValueError: Если Google Book ID не был предоставлен.
         """
         if not google_id:
             raise ValueError("Google Book ID не был предоставлен.")
@@ -248,20 +248,17 @@ class BookService:
     @staticmethod
     async def get_trending_books(db: AsyncSession, limit: int = 10) -> List[Book]:
         """
+        Получает список трендовых книг за последние 7 дней.
+
         Args:
             db: Асинхронная сессия базы данных.
             limit: Максимальное количество результатов.
 
         Returns:
             Список трендовых книг.
-
-        Raises:
-            ValueError: Если лимит не был предоставлен.
         """
-        # Считаем границу времени (ровно 7 дней назад от текущего момента)
         week_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
 
-        # 1. Подзапрос: считаем баллы за свежие рецензии (вес 3)
         reviews_subq = (
             select(Review.book_id, (func.count(Review.id) * 3).label("review_score"))
             .where(Review.created_at >= week_ago)
@@ -269,7 +266,6 @@ class BookService:
             .subquery()
         )
 
-        # 2. Подзапрос: считаем баллы за свежие закладки (вес 1)
         bookmarks_subq = (
             select(Bookmark.book_id, func.count(Bookmark.id).label("bookmark_score"))
             .where(Bookmark.created_at >= week_ago)
@@ -277,14 +273,12 @@ class BookService:
             .subquery()
         )
 
-        # 3. Основной запрос: Собираем книги и складываем баллы
         stmt = (
             select(Book)
             .outerjoin(reviews_subq, Book.id == reviews_subq.c.book_id)
             .outerjoin(bookmarks_subq, Book.id == bookmarks_subq.c.book_id)
-            .options(selectinload(Book.authors))  # Подгружаем авторов для Pydantic
+            .options(selectinload(Book.authors))
             .where(
-                # Берем только те книги, у которых есть хоть какая-то активность за неделю
                 (
                     func.coalesce(reviews_subq.c.review_score, 0)
                     + func.coalesce(bookmarks_subq.c.bookmark_score, 0)
@@ -292,7 +286,6 @@ class BookService:
                 > 0
             )
             .order_by(
-                # Сортируем по сумме баллов по убыванию
                 desc(
                     func.coalesce(reviews_subq.c.review_score, 0)
                     + func.coalesce(bookmarks_subq.c.bookmark_score, 0)

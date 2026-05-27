@@ -12,8 +12,8 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @router.get(
     "/me",
     response_model=schemas.UserRead,
-    summary="Read current user profile",
-    description="Retrieves extended information about the current authenticated user, including statistics.",
+    summary="Читать профиль текущего пользователя",
+    description="Получает расширенную информацию о текущем авторизованном пользователе, включая статистику.",
 )
 async def read_users_me(
     db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
@@ -24,8 +24,8 @@ async def read_users_me(
 @router.patch(
     "/me",
     response_model=schemas.UserResponse,
-    summary="Update current user",
-    description="Updates the authenticated user's information. Only the fields provided in the request body will be updated.",
+    summary="Обновить текущего пользователя",
+    description="Обновляет информацию о текущем авторизованном пользователе. Обновляются только те поля, которые переданы в теле запроса.",
 )
 async def update_user(
     user_in: schemas.UserUpdate,
@@ -41,8 +41,8 @@ async def update_user(
 @router.post(
     "/me/avatar",
     response_model=schemas.UserResponse,
-    summary="Upload user avatar",
-    description="Uploads an avatar image for the current user. Only JPEG, PNG, and WEBP formats under 5MB are allowed.",
+    summary="Загрузить аватар пользователя",
+    description="Загружает изображение аватара для текущего пользователя. Разрешены форматы JPEG, PNG и WEBP размером до 5 МБ.",
 )
 async def upload_avatar(
     file: UploadFile = File(...),
@@ -59,8 +59,8 @@ async def upload_avatar(
 @router.delete(
     "/me",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete current user",
-    description="Deletes the authenticated user account. This action is irreversible.",
+    summary="Удалить текущего пользователя",
+    description="Удаляет аккаунт текущего авторизованного пользователя. Это необратимая операция.",
 )
 async def delete_user(
     db: AsyncSession = Depends(get_db),
