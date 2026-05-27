@@ -21,6 +21,5 @@ class Bookmark(Base):
     created_at: Mapped[created_at]
     updated_at: Mapped[updated_at]
 
-    # Связи, чтобы Книга и Юзер знали о закладке
     user: Mapped["User"] = relationship(back_populates="bookmarks")
     book: Mapped["Book"] = relationship(back_populates="bookmarks")

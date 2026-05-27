@@ -11,33 +11,34 @@ from .services import AuthService
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
+
 @router.post(
     "/register",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Register a new user",
-    description="Creates a new user account with the provided email, username, and password.",
+    summary="Регистрация нового пользователя",
+    description="Создает новый аккаунт пользователя с указанными email, username и паролем.",
 )
 async def register_user(
     user_in: schemas.UserRegister,
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        # Используем существующую логику создания юзера
         return await UserService.create_user(db, user_in)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except IntegrityError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email or username already exists",
+            detail="Пользователь с таким email или username уже существует",
         )
+
 
 @router.post(
     "/login",
     response_model=schemas.Token,
-    summary="Login for access and refresh tokens",
-    description="Authenticates a user and returns JWT tokens.",
+    summary="Логин для получения access и refresh токенов",
+    description="Аутентифицирует пользователя и возвращает JWT токены.",
 )
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -53,37 +54,35 @@ async def login_for_access_token(
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     return await AuthService.create_tokens(db, user)
+
 
 @router.post(
     "/refresh",
     response_model=schemas.Token,
-    summary="Refresh tokens",
-    description="Returns a new access and refresh token pair if the provided refresh token is valid.",
+    summary="Обновление токенов",
+    description="Возвращает новую пару access и refresh токенов, если предоставленный refresh токен действителен.",
 )
 async def refresh_tokens(
-    token_in: schemas.TokenRefresh,
-    db: AsyncSession = Depends(get_db)
+    token_in: schemas.TokenRefresh, db: AsyncSession = Depends(get_db)
 ):
     try:
         return await AuthService.refresh_tokens(db, token_in.refresh_token)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
+            detail="Не удалось проверить учетные данные",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
 
 @router.post(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Logout user",
-    description="Revokes the provided refresh token.",
+    summary="Выход пользователя",
+    description="Отзывает предоставленный refresh токен.",
 )
-async def logout(
-    token_in: schemas.TokenRefresh,
-    db: AsyncSession = Depends(get_db)
-):
+async def logout(token_in: schemas.TokenRefresh, db: AsyncSession = Depends(get_db)):
     await AuthService.logout(db, token_in.refresh_token)
     return None

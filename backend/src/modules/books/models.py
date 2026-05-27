@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from src.modules.reviews.models import Review
     from src.modules.bookmarks.models import Bookmark
 
-# Связующие Table для many-to-many
+# Связующие таблицы для many-to-many
 book_authors = Table(
     "book_authors",
     Base.metadata,
@@ -39,7 +39,7 @@ book_genres = Table(
 )
 
 
-# Модели
+# Основные модели
 class Author(Base):
     __tablename__ = "authors"
 

@@ -15,7 +15,13 @@ from src.modules.auth.deps import get_current_user
 router = APIRouter(prefix="/bookmarks", tags=["Bookmarks"])
 
 
-@router.post("/", response_model=BookmarkResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/",
+    response_model=BookmarkResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Добавление или удаление закладки у книги",
+    description="Добавляет или удаляет закладку у конкретной книги.",
+)
 async def toggle_bookmark(
     bookmark_in: BookmarkCreate,
     current_user: User = Depends(get_current_user),
@@ -30,7 +36,13 @@ async def toggle_bookmark(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/", response_model=List[BookmarkResponse], status_code=status.HTTP_200_OK)
+@router.get(
+    "/",
+    response_model=List[BookmarkResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Получение закладок пользователя",
+    description="Получает все закладки пользователя, опционально фильтруя по статусу.",
+)
 async def get_bookmarks(
     status: Optional[BookmarkStatus] = Query(
         None, description="Фильтр по статусу закладки"
@@ -42,7 +54,12 @@ async def get_bookmarks(
     return bookmarks
 
 
-@router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{book_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Удаление закладки",
+    description="Удаляет закладку у конкретной книги.",
+)
 async def delete_bookmark(
     book_id: int,
     current_user: User = Depends(get_current_user),

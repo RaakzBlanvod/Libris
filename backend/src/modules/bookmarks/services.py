@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.bookmarks.models import Bookmark
 from src.modules.bookmarks.schemas import BookmarkCreate, BookmarkStatus
-# from src.modules.books.services import BookService
 
 
 class BookmarkService:
@@ -15,19 +14,13 @@ class BookmarkService:
         Добавляет или обновляет статус закладки.
 
         Args:
-            db: асинхронная сессия
-            user_id: id пользователя
-            bookmark_data: схема закладки
+            db: Асинхронная сессия базы данных.
+            user_id: ID пользователя.
+            bookmark_data: Данные закладки.
 
         Returns:
-            Bookmark: обновленная или созданная закладка
+            Bookmark: Обновленная или созданная закладка.
         """
-        # 1. Убеждаемся, что книга существует в нашей БД
-        # На всякий случай, если юзер как то дернет ручку до создания книги
-        # Либо реализуем добавление в закладки в post ручке /books/search
-        # await BookService.get_or_create_book(db, bookmark_data.book_id)
-
-        # 2. Ищем, нет ли уже такой закладки у этого юзера
         query = select(Bookmark).where(
             Bookmark.user_id == user_id, Bookmark.book_id == bookmark_data.book_id
         )
@@ -35,13 +28,11 @@ class BookmarkService:
         existing_bookmark = result.scalar_one_or_none()
 
         if existing_bookmark:
-            # Если нашли — просто обновляем статус и updated_at (автоматически)
             existing_bookmark.status = bookmark_data.status
             await db.commit()
             await db.refresh(existing_bookmark)
             return existing_bookmark
 
-        # 3. Если нет — создаем новую
         new_bookmark = Bookmark(
             user_id=user_id, book_id=bookmark_data.book_id, status=bookmark_data.status
         )
@@ -58,12 +49,12 @@ class BookmarkService:
         Получает список всех закладок пользователя.
 
         Args:
-            db: асинхронная сессия
-            user_id: id пользователя
-            status: статус закладки
+            db: Асинхронная сессия базы данных.
+            user_id: ID пользователя.
+            status: Фильтр по статусу закладки.
 
         Returns:
-            list[Bookmark]: список закладок
+            list[Bookmark]: Список закладок.
         """
         stmt = select(Bookmark).where(Bookmark.user_id == user_id)
 
@@ -81,12 +72,15 @@ class BookmarkService:
         Удаляет книгу из закладок пользователя.
 
         Args:
-            db: асинхронная сессия
-            user_id: id пользователя
-            book_id: id книги
+            db: Асинхронная сессия базы данных.
+            user_id: ID пользователя.
+            book_id: ID книги.
 
         Returns:
-            bool: True, если закладка была удалена, False иначе
+            bool: True, если закладка была удалена.
+
+        Raises:
+            ValueError: Если закладка не найдена.
         """
         query = select(Bookmark).where(
             Bookmark.user_id == user_id, Bookmark.book_id == book_id

@@ -5,9 +5,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class BookmarkStatus(str, Enum):
     """
-    Допустимые статусы для закладок.
-    Наследуемся от str, чтобы в JSON это уходило как обычная строка.
+    Enum статусов для закладок пользователя.
+    Наследуется от str для корректной сериализации в JSON.
     """
+
     PLANNED = "Planned"
     READING = "Reading"
     FINISHED = "Finished"
@@ -16,41 +17,36 @@ class BookmarkStatus(str, Enum):
 
 class BookmarkBase(BaseModel):
     """
-    Базовая схема для закладки.
-    Содержит поля, общие для всех остальных схем.
+    Базовая схема закладки.
     """
+
     status: BookmarkStatus = Field(
-        default=BookmarkStatus.PLANNED, 
-        description="Текущий статус книги в библиотеке пользователя"
+        default=BookmarkStatus.PLANNED,
+        description="Текущий статус книги в библиотеке пользователя",
     )
 
 
 class BookmarkCreate(BookmarkBase):
     """
-    Схема для POST-запроса (добавление в закладки).
-    Пользователь передает только ID книги и, по желанию, статус (по умолчанию Planned).
+    Схема для добавления книги в закладки.
     """
-    book_id: int = Field(..., description="ID книги, которую нужно добавить в закладки")
 
-# Не нужна пока, можно обходиться toggle_bookmark, но оставляю для возможного будущего использования.
-# class BookmarkUpdate(BookmarkBase):
-#     """
-#     Схема для PATCH/PUT-запроса (изменение статуса).
-#     Наследует поле status от BookmarkBase. 
-#     book_id здесь не нужен, так как мы меняем статус уже существующей закладки.
-#     """
-#     pass
+    book_id: int = Field(
+        ..., description="Внутренний ID книги для добавления в закладки"
+    )
 
 
 class BookmarkResponse(BookmarkBase):
     """
-    Схема для ответа API (возврат данных из базы).
+    Схема для возврата данных о закладке из API.
     """
+
     id: int = Field(..., description="Уникальный ID закладки")
     user_id: int = Field(..., description="ID владельца закладки")
     book_id: int = Field(..., description="ID сохраненной книги")
-    created_at: datetime = Field(..., description="Дата и время добавления")
-    updated_at: datetime = Field(..., description="Дата и время обновления")
+    created_at: datetime = Field(..., description="Дата и время добавления в закладки")
+    updated_at: datetime = Field(
+        ..., description="Дата и время последнего обновления закладки"
+    )
 
-    # Включаем совместимость с объектами SQLAlchemy
     model_config = ConfigDict(from_attributes=True)
