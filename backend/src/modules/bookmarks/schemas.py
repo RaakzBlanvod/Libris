@@ -2,6 +2,8 @@ from enum import Enum
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.modules.books.schemas import BookShortResponse
+
 
 class BookmarkStatus(str, Enum):
     """
@@ -50,3 +52,11 @@ class BookmarkResponse(BookmarkBase):
     )
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class BookmarkWithBookResponse(BookmarkResponse):
+    """
+    Схема для списка закладок пользователя (включает данные о книге).
+    """
+
+    book: BookShortResponse = Field(..., description="Краткая информация о книге")
