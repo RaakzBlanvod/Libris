@@ -6,6 +6,7 @@ from src.core.database import get_db
 from src.modules.bookmarks.schemas import (
     BookmarkCreate,
     BookmarkResponse,
+    BookmarkWithBookResponse,
     BookmarkStatus,
 )
 from src.modules.bookmarks.services import BookmarkService
@@ -38,7 +39,7 @@ async def toggle_bookmark(
 
 @router.get(
     "/",
-    response_model=List[BookmarkResponse],
+    response_model=List[BookmarkWithBookResponse],
     status_code=status.HTTP_200_OK,
     summary="Получение закладок пользователя",
     description="Получает все закладки пользователя, опционально фильтруя по статусу.",
