@@ -37,6 +37,14 @@ jobs:
         run: uv sync
         working-directory: backend
       - name: Run tests
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+          DATABASE_URL: postgresql+asyncpg://test_user:test_password@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key
+          GOOGLE_BOOKS_API_KEY: test-google-api-key
         run: uv run pytest tests/unit/ -v
         working-directory: backend
 
