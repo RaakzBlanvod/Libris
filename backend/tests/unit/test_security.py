@@ -36,20 +36,28 @@ def test_create_refresh_token_payload():
     assert payload["type"] == "refresh"
     assert "exp" in payload
 
+
 def test_access_token_expires():
-    token = create_access_token(data={"sub": "email@example.com"}, expires_delta=timedelta(seconds=-1))
+    token = create_access_token(
+        data={"sub": "email@example.com"}, expires_delta=timedelta(seconds=-1)
+    )
     with pytest.raises(jwt.ExpiredSignatureError):
         jwt.decode(
             token,
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
-            options={"verify_exp": True}
+            options={"verify_exp": True},
         )
+
 
 def test_tokens_type_are_different():
     access = create_access_token(data={"sub": "email@example.com"})
     refresh = create_refresh_token(data={"sub": "email@example.com"})
-    access_payload = jwt.decode(access, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-    refresh_payload = jwt.decode(refresh, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    access_payload = jwt.decode(
+        access, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+    )
+    refresh_payload = jwt.decode(
+        refresh, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+    )
     assert access_payload["type"] == "access"
     assert refresh_payload["type"] == "refresh"

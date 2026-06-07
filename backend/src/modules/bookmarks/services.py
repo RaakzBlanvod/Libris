@@ -57,7 +57,11 @@ class BookmarkService:
         Returns:
             list[Bookmark]: Список закладок.
         """
-        stmt = select(Bookmark).where(Bookmark.user_id == user_id).options(selectinload(Bookmark.book))
+        stmt = (
+            select(Bookmark)
+            .where(Bookmark.user_id == user_id)
+            .options(selectinload(Bookmark.book))
+        )
 
         if status:
             stmt = stmt.where(Bookmark.status == status)

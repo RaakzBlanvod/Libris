@@ -7,11 +7,15 @@ from src.modules.users.schemas import UserCreate
 
 @patch("src.modules.users.services.get_user_by_email", new_callable=AsyncMock)
 @patch("src.modules.users.services.get_user_by_username", new_callable=AsyncMock)
-async def test_create_user_email_already_exists(mock_get_by_username, mock_get_by_email):
+async def test_create_user_email_already_exists(
+    mock_get_by_username, mock_get_by_email
+):
     mock_get_by_email.return_value = MagicMock()
     mock_db = AsyncMock()
 
-    user_in = UserCreate(email="exists@example.com", username="newuser", password="password")
+    user_in = UserCreate(
+        email="exists@example.com", username="newuser", password="password"
+    )
 
     with pytest.raises(ValueError, match="Email уже используется."):
         await UserService.create_user(mock_db, user_in)
