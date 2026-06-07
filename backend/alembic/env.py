@@ -12,10 +12,16 @@ from alembic import context
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Тут нужно добавить путь к src, чтобы импортировать настройки и базу данных
+# Импортируем настройки и базу данных
 from src.core.config import settings
 from src.core.database import Base
 
+# Модели для Alembic
+from src.modules.users.models import User  # noqa: F401
+from src.modules.books.models import Book, Author, Genre  # noqa: F401
+from src.modules.bookmarks.models import Bookmark  # noqa: F401
+from src.modules.reviews.models import Review, ReviewLike  # noqa: F401
+from src.modules.auth.models import RefreshToken  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -56,6 +62,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        compare_server_default=True,
     )
 
     with context.begin_transaction():
@@ -63,7 +71,12 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        compare_server_default=True,
+    )
 
     with context.begin_transaction():
         context.run_migrations()

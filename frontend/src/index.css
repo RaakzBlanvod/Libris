@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/* Тёмный фон на уровне документа — убирает белый «фласк» по бокам при переходах/логине */
+html,
+body,
+#root {
+  background-color: #020617; /* slate-950 */
+  min-height: 100vh;
+}
+
+/* Горизонтальная прокрутка каруселей без видимого скроллбара */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
