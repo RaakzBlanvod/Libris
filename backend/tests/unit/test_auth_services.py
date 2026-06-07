@@ -23,7 +23,9 @@ async def test_authenticate_user_wrong_password(mock_get_user):
     mock_db = AsyncMock()
 
     with pytest.raises(ValueError, match="Неверный пароль"):
-        await AuthService.authenticate_user(mock_db, "user@example.com", "wrongpassword")
+        await AuthService.authenticate_user(
+            mock_db, "user@example.com", "wrongpassword"
+        )
 
 
 @patch("src.modules.auth.services.get_user_by_email", new_callable=AsyncMock)
@@ -34,5 +36,7 @@ async def test_authenticate_user_success(mock_get_user):
     mock_get_user.return_value = mock_user
     mock_db = AsyncMock()
 
-    result = await AuthService.authenticate_user(mock_db, "user@example.com", "correctpassword")
+    result = await AuthService.authenticate_user(
+        mock_db, "user@example.com", "correctpassword"
+    )
     assert result is mock_user
