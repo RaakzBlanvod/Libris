@@ -111,6 +111,9 @@ class BookShortTitleResponse(BaseModel):
 
     id: int = Field(..., description="Внутренний ID книги")
     title: str = Field(..., description="Название книги")
+    google_id: Optional[str] = Field(
+        default=None, description="ID книги в Google Books"
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
