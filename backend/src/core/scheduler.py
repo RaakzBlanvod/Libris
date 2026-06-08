@@ -8,7 +8,7 @@ from src.core.redis import get_redis
 from src.modules.books.services import BookService
 from src.modules.reviews.services import ReviewService
 from src.modules.books.schemas import BookShortResponse
-from src.modules.reviews.schemas import ReviewResponse
+from src.modules.reviews.schemas import ReviewBookResponse
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ async def update_dashboard_cache_task():
 
             reviews_json = json.dumps(
                 [
-                    ReviewResponse.model_validate(r).model_dump(mode="json")
+                    ReviewBookResponse.model_validate(r).model_dump(mode="json")
                     for r in trending_reviews
                 ],
                 ensure_ascii=False,

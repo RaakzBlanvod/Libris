@@ -90,7 +90,7 @@ class ReviewUpdate(BaseModel):
 
 class ReviewResponse(ReviewBase):
     """
-    Схема для отображения полной рецензии в списках и на странице книги.
+    Схема для отображения полной рецензии в списках и на странице книги, а так же создания рецензии и изменения.
     """
 
     id: int = Field(..., description="Уникальный идентификатор рецензии")
@@ -111,14 +111,14 @@ class BookShortTitleResponse(BaseModel):
 
     id: int = Field(..., description="Внутренний ID книги")
     title: str = Field(..., description="Название книги")
+    google_id: str = Field(..., description="ID книги в Google Books")
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class MyReviewResponse(ReviewResponse):
+class ReviewBookResponse(ReviewResponse):
     """
-    Схема для страницы 'Мои рецензии'.
-    Включает информацию не только о самой рецензии, но и о книге.
+    Схема с информацией не только о самой рецензии, но и о книге.
     """
 
     book: BookShortTitleResponse = Field(
