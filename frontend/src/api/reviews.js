@@ -10,15 +10,19 @@ export const getLikedReviewIds = async (user) => {
   if (!user) return [];
   try {
     const res = await api.get('/api/v1/reviews/my/likes');
-    return res.data;
+    // Подстраховка: если вдруг пришёл не массив — отдаём пустой.
+    return Array.isArray(res.data) ? res.data : [];
   } catch {
     return [];
   }
 };
 
 // Проставляет is_liked в списке рецензий по набору лайкнутых ID.
+// Защищаемся от не-массивов на входе (чтобы не уронить рендер).
 export const dockLikes = (reviews, likedIds) => {
-  const likedSet = likedIds instanceof Set ? likedIds : new Set(likedIds);
+  if (!Array.isArray(reviews)) return [];
+  const ids = Array.isArray(likedIds) ? likedIds : [];
+  const likedSet = likedIds instanceof Set ? likedIds : new Set(ids);
   return reviews.map((review) => ({
     ...review,
     is_liked: likedSet.has(review.id),

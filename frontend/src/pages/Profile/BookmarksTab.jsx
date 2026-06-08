@@ -8,6 +8,7 @@ import {
   statusEmojiLabel,
 } from '../../constants/bookmarks';
 import { formatAuthors } from '../../utils/formatAuthors';
+import { secureUrl } from '../../utils/secureUrl';
 
 // =============================================================================
 // Вкладка «Профиль → Закладки» — список закладок выбранного статуса.
@@ -30,7 +31,7 @@ export default function BookmarksTab() {
       const res = await api.get('/api/v1/bookmarks/', {
         params: { status: selectedStatus },
       });
-      setBookmarks(res.data);
+      setBookmarks(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Ошибка загрузки закладок:', err);
     } finally {
@@ -120,7 +121,7 @@ export default function BookmarksTab() {
                 >
                   {book.cover_url ? (
                     <img
-                      src={book.cover_url}
+                      src={secureUrl(book.cover_url)}
                       alt={book.title || 'Обложка книги'}
                       className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
                     />

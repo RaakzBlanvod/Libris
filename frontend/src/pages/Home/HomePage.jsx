@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import ReviewCard from '../../components/ReviewCard/ReviewCard';
 import { BookGridSkeleton } from '../../components/Skeleton/Skeleton';
 import { formatAuthors } from '../../utils/formatAuthors';
+import { secureUrl } from '../../utils/secureUrl';
 
 // =============================================================================
 // Главная страница (лендинг + поиск).
@@ -30,7 +31,7 @@ function BookCard({ book }) {
     <Link to={`/books/${book.google_id}`} className="group">
       <div className="overflow-hidden rounded-xl shadow-lg border border-slate-800 bg-slate-900">
         <img
-          src={book.cover_url || '/placeholder-book.jpg'}
+          src={secureUrl(book.cover_url) || '/placeholder-book.jpg'}
           alt={book.title}
           className="w-full h-64 object-cover transition duration-300 group-hover:scale-105"
         />
@@ -78,8 +79,8 @@ export default function HomePage() {
           api.get('/api/v1/reviews/trending').then((r) => r.data).catch(() => []),
           getLikedReviewIds(user),
         ]);
-        setTrendingBooks(books);
-        setTrendingReviews(dockLikes(reviews, likedIds));
+        setTrendingBooks(Array.isArray(books) ? books : []);
+        setTrendingReviews(dockLikes(reviews, likedIds)); // dockLikes сам защищён от не-массива
       } finally {
         setIsLoadingTrending(false);
       }
