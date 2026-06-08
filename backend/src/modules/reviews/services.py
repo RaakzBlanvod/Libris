@@ -397,7 +397,10 @@ class ReviewService:
         stmt = (
             select(Review, total_likes_subq)
             .join(likes_subq, Review.id == likes_subq.c.review_id)
-            .options(selectinload(Review.user))
+            .options(
+                selectinload(Review.user),
+                selectinload(Review.book)
+            )
             .order_by(desc(likes_subq.c.recent_likes_count))
             .limit(limit)
         )
