@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
+import { BOOKMARK_STATUSES } from '../../constants/bookmarks';
 
-const STATUS_META = [
-  { key: 'Planned', label: 'В планах', color: 'bg-slate-500' },
-  { key: 'Reading', label: 'Читаю', color: 'bg-blue-500' },
-  { key: 'Finished', label: 'Прочитано', color: 'bg-emerald-500' },
-  { key: 'Dropped', label: 'Брошено', color: 'bg-red-500' },
-];
+// =============================================================================
+// Вкладка «Профиль» → блок статистики пользователя.
+//
+// Считает всё на клиенте из двух списков: мои рецензии (/reviews/my) и мои
+// закладки (/bookmarks/). Показывает: число рецензий, среднюю выставленную
+// оценку, собранные лайки, гистограмму распределения оценок и разбивку
+// библиотеки по статусам. Статусы и их цвета берём из общих констант.
+// =============================================================================
 
+// Небольшая карточка-цифра (Рецензий / Средняя оценка / Лайков).
 function StatCard({ value, label }) {
   return (
     <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700 text-center">
@@ -22,6 +26,8 @@ export default function ProfileStats() {
   const [reviews, setReviews] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
 
+  // Тянем рецензии и закладки параллельно; при ошибке любого — пустой список
+  // (статистика просто покажет нули, а не падает).
   useEffect(() => {
     const load = async () => {
       try {
@@ -46,22 +52,26 @@ export default function ProfileStats() {
     );
   }
 
+  // --- Производные метрики ---
   const reviewsCount = reviews.length;
+  // Средняя из выставленных оценок (overall_rating каждой рецензии).
   const avgGiven = reviewsCount
     ? (reviews.reduce((s, r) => s + (r.overall_rating || 0), 0) / reviewsCount).toFixed(1)
     : '—';
   const totalLikes = reviews.reduce((s, r) => s + (r.like_count || 0), 0);
 
-  // Распределение по округлённой средней оценке (1..10)
+  // Гистограмма: сколько рецензий попало в каждую целую оценку 1..10
+  // (округляем overall_rating и кладём в соответствующую корзину).
   const dist = Array.from({ length: 10 }, () => 0);
   reviews.forEach((r) => {
     const bucket = Math.round(r.overall_rating || 0);
     if (bucket >= 1 && bucket <= 10) dist[bucket - 1] += 1;
   });
-  const maxDist = Math.max(1, ...dist);
+  const maxDist = Math.max(1, ...dist); // максимум — для нормировки высоты столбцов
 
+  // Разбивка библиотеки по статусам (берём порядок/цвета из общих констант).
   const libTotal = bookmarks.length;
-  const statusCounts = STATUS_META.map((s) => ({
+  const statusCounts = BOOKMARK_STATUSES.map((s) => ({
     ...s,
     count: bookmarks.filter((b) => b.status === s.key).length,
   }));
@@ -75,7 +85,7 @@ export default function ProfileStats() {
         <StatCard value={totalLikes} label="Лайков собрано" />
       </div>
 
-      {/* Распределение выставленных оценок */}
+      {/* Гистограмма распределения выставленных оценок (только если есть рецензии) */}
       {reviewsCount > 0 && (
         <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
           <h3 className="text-white font-bold mb-4">Как вы оцениваете книги</h3>
@@ -94,7 +104,7 @@ export default function ProfileStats() {
         </div>
       )}
 
-      {/* Библиотека по статусам */}
+      {/* Библиотека по статусам: полоса прогресса на каждый статус */}
       <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
         <h3 className="text-white font-bold mb-4">Библиотека ({libTotal})</h3>
         {libTotal === 0 ? (
@@ -109,7 +119,7 @@ export default function ProfileStats() {
                 </div>
                 <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
                   <div
-                    className={`h-full ${s.color} rounded-full`}
+                    className={`h-full ${s.bar} rounded-full`}
                     style={{ width: `${libTotal ? (s.count / libTotal) * 100 : 0}%` }}
                   ></div>
                 </div>

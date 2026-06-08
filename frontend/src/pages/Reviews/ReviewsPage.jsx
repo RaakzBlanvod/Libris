@@ -1,34 +1,39 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
+import { getLikedReviewIds, dockLikes } from '../../api/reviews';
 import { useAuth } from '../../context/AuthContext';
 import ReviewCard from '../../components/ReviewCard/ReviewCard';
 import { ReviewListSkeleton } from '../../components/Skeleton/Skeleton';
+import { sortReviews } from '../../utils/sortReviews';
 
+// =============================================================================
+// Страница «Лучшие рецензии» (маршрут /reviews).
+//
+// Источник — /reviews/trending (топ по лайкам за неделю, кэш Redis). В кэше
+// is_liked всегда false, поэтому сердечки «докрашиваем» отдельным запросом
+// списка лайкнутых ID (getLikedReviewIds + dockLikes). Локальная сортировка
+// (по лайкам/оценке/свежести) — общей утилитой sortReviews.
+//
+// showBook у карточек включает строку «к какой книге рецензия» со ссылкой
+// (бэк отдаёт book.google_id в трендах).
+// =============================================================================
 export default function ReviewsPage() {
   const { user } = useAuth();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sort, setSort] = useState('likes');
+  const [sort, setSort] = useState('likes'); // режим сортировки списка
 
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        // Тренды отдаются из кэша Redis, где is_liked всегда false.
-        // Поэтому докрашиваем сердечки отдельным запросом списка лайкнутых ID.
+        // Параллельно: сами тренды и список лайкнутых ID текущего пользователя.
         const [trendingRes, likedIds] = await Promise.all([
           api.get('/api/v1/reviews/trending'),
-          user
-            ? api.get('/api/v1/reviews/my/likes').then((r) => r.data).catch(() => [])
-            : Promise.resolve([]),
+          getLikedReviewIds(user),
         ]);
 
-        const likedSet = new Set(likedIds);
-        setReviews(
-          trendingRes.data.map((review) => ({
-            ...review,
-            is_liked: likedSet.has(review.id),
-          }))
-        );
+        // Проставляем is_liked поверх кэшированных трендов.
+        setReviews(dockLikes(trendingRes.data, likedIds));
       } catch (err) {
         console.error('Ошибка загрузки трендовых рецензий:', err);
       } finally {
@@ -36,13 +41,10 @@ export default function ReviewsPage() {
       }
     };
     fetchTrending();
-  }, [user]);
+  }, [user]); // перезапрашиваем при логине/логауте (меняется набор лайков)
 
-  const sortedReviews = [...reviews].sort((a, b) => {
-    if (sort === 'rating') return (b.overall_rating || 0) - (a.overall_rating || 0);
-    if (sort === 'new') return new Date(b.created_at) - new Date(a.created_at);
-    return (b.like_count || 0) - (a.like_count || 0);
-  });
+  // Сортируем копию по выбранному режиму (исходный массив не трогаем).
+  const sortedReviews = sortReviews(reviews, sort);
 
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-12 text-slate-200">
@@ -54,6 +56,7 @@ export default function ReviewsPage() {
             </h1>
             <p className="text-slate-400 mt-2">Самые залайканные разборы за последнюю неделю.</p>
           </div>
+          {/* Селектор сортировки показываем только когда есть что сортировать */}
           {reviews.length > 0 && (
             <select
               value={sort}
@@ -76,7 +79,7 @@ export default function ReviewsPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {sortedReviews.map((review) => (
-              <ReviewCard key={review.id} review={review} />
+              <ReviewCard key={review.id} review={review} showBook />
             ))}
           </div>
         )}

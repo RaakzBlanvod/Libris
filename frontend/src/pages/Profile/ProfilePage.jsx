@@ -10,6 +10,15 @@ import ReviewsTab from './ReviewsTab';
 import BookmarksTab from './BookmarksTab';
 import ProfileStats from './ProfileStats';
 
+// =============================================================================
+// Страница профиля (маршрут /profile).
+//
+// Шапка профиля (аватар, ник, био, любимые жанры, счётчики) + три вкладки:
+//  - «Профиль»  → статистика (ProfileStats) и «опасная зона» (удаление аккаунта);
+//  - «Мои рецензии» → ReviewsTab;
+//  - «Закладки» → BookmarksTab.
+// Гостю показываем экран «Доступ закрыт». Редактирование — через EditProfileModal.
+// =============================================================================
 export default function ProfilePage() {
   const auth = useAuth();
   const [activeTab, setActiveTab] = useState('profile');

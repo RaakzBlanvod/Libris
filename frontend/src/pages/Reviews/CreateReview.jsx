@@ -3,27 +3,28 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { REVIEW_CATEGORIES as categories, MIN_TEXT, MIN_GENERAL } from '../../constants/reviews';
+import RatingStepper from '../../components/RatingStepper/RatingStepper';
 
-const categories = [
-  { id: 'plot', label: 'Сюжет' },
-  { id: 'characters', label: 'Персонажи' },
-  { id: 'style', label: 'Атмосфера и стиль' },
-  { id: 'pacing', label: 'Темп и динамика' },
-  { id: 'world', label: 'Мироустройство' },
-];
-
-// Минимальные длины из схем бэка (ReviewBase)
-const MIN_TEXT = 10;
-const MIN_GENERAL = 20;
-
+// =============================================================================
+// Страница создания рецензии на книгу (маршрут /books/:id/review).
+//
+// Форма из 5 критериев (сюжет/персонажи/стиль/темп/мир): по каждому — оценка
+// 1..10 (RatingStepper) и текст-обоснование, плюс общий вывод. Минимальные
+// длины текстов берём из констант, совпадающих с валидацией бэка (ReviewBase),
+// чтобы не ловить 400. `:id` в URL — это google_id книги; внутренний book.id
+// нужен для POST-запроса, поэтому сначала грузим книгу.
+// =============================================================================
 export default function CreateReview() {
-  const { id } = useParams();
+  const { id } = useParams(); // google_id книги из URL
   const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
-  const [book, setBook] = useState(null);
-  const [loading, setLoading] = useState(false);
-  
+  const [book, setBook] = useState(null); // данные книги (нужен внутренний id)
+  const [loading, setLoading] = useState(false); // идёт отправка рецензии
+
+  // Все поля формы в одном объекте: `${критерий}_rating` и `${критерий}_text`
+  // + общий вывод. Оценки по умолчанию 5 (середина шкалы 1..10).
   const [formData, setFormData] = useState({
     plot_rating: 5, plot_text: '',
     characters_rating: 5, characters_text: '',
@@ -33,11 +34,12 @@ export default function CreateReview() {
     general_text: ''
   });
 
-  // Гостя на страницу создания рецензии не пускаем
+  // Гостя на страницу создания рецензии не пускаем — отправляем логиниться.
   useEffect(() => {
     if (!user) navigate('/login');
   }, [user, navigate]);
 
+  // Грузим книгу по google_id из URL (нужен её внутренний id для POST).
   useEffect(() => {
     if (!id) return;
     api.get(`/api/v1/books/${id}`)
@@ -45,11 +47,13 @@ export default function CreateReview() {
       .catch(err => console.error("Ошибка загрузки книги:", err));
   }, [id]);
 
+  // Универсальный апдейтер одного поля формы по имени.
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Валидация минимальных длин до отправки (чтобы не ловить 400 с бэка)
+  // --- Клиентская валидация минимальных длин (зеркалит схему бэка) ---
+  // Критерии, у которых текст короче минимума, — для подсветки и сообщения.
   const missingCriteria = categories.filter(
     (cat) => formData[`${cat.id}_text`].trim().length < MIN_TEXT
   );
@@ -58,11 +62,13 @@ export default function CreateReview() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Книга ещё могла не догрузиться — без её внутреннего id отправлять некуда.
     if (!book || !book.id) {
       toast.error("Данные книги ещё не загрузились. Попробуйте снова через секунду.");
       return;
     }
 
+    // Подробно подсказываем, что именно заполнить (до обращения к бэку).
     if (!isValid) {
       const parts = [];
       if (missingCriteria.length) {
@@ -76,10 +82,12 @@ export default function CreateReview() {
     setLoading(true);
 
     try {
+      // Создаём рецензию по внутреннему id книги и возвращаемся на страницу книги.
       await api.post(`/api/v1/reviews/book/${book.id}`, formData);
       toast.success("Рецензия успешно опубликована!");
       navigate(`/books/${id}`);
     } catch (err) {
+      // Бэк может вернуть detail строкой (бизнес-ошибка) или массивом (валидация).
       const backendError = err.response?.data?.detail;
       if (typeof backendError === 'string') {
         toast.error(backendError);
@@ -93,6 +101,7 @@ export default function CreateReview() {
     }
   };
 
+  // Пока книга грузится — заглушка (без неё нет заголовка и id).
   if (!book) return <div className="text-white text-center p-20">Загрузка данных книги...</div>;
 
   return (
@@ -102,25 +111,25 @@ export default function CreateReview() {
         <p className="text-indigo-400 mb-8 font-semibold text-lg">{book.title}</p>
 
         <form onSubmit={handleSubmit} className="bg-slate-900 p-8 rounded-2xl border border-slate-800 space-y-6">
+          {/* Строка на каждый критерий: оценка (степпер) + текст-обоснование */}
           {categories.map((cat) => (
             <div key={cat.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 border-b border-slate-800 pb-4">
               <div className="md:col-span-1">
                 <label className="block text-slate-400 font-medium mb-1">{cat.label}</label>
-                <input
-                  type="number" min="1" max="10"
+                <RatingStepper
                   value={formData[`${cat.id}_rating`]}
-                  onChange={(e) => handleChange(`${cat.id}_rating`, parseInt(e.target.value, 10) || 5)}
-                  className="w-full bg-slate-950 p-2 rounded-lg border border-slate-700 text-white text-center"
+                  onChange={(n) => handleChange(`${cat.id}_rating`, n)}
                 />
               </div>
               <div className="md:col-span-3">
                 <textarea
-                  className="w-full bg-slate-950 p-2 rounded-lg border border-slate-700 h-20 text-sm"
-                  placeholder={`Минимум 10 символов о параметре: ${cat.label.toLowerCase()}`}
+                  className="w-full bg-slate-950 p-2 rounded-lg border border-slate-700 h-20 min-h-[5rem] resize-y text-sm"
+                  placeholder={`Минимум ${MIN_TEXT} символов о параметре: ${cat.label.toLowerCase()}`}
                   value={formData[`${cat.id}_text`]}
                   onChange={(e) => handleChange(`${cat.id}_text`, e.target.value)}
                   required
                 />
+                {/* Счётчик «сколько ещё символов нужно», пока текст слишком короткий */}
                 {formData[`${cat.id}_text`].trim().length > 0 &&
                   formData[`${cat.id}_text`].trim().length < MIN_TEXT && (
                     <p className="text-xs text-amber-400 mt-1">
@@ -131,10 +140,11 @@ export default function CreateReview() {
             </div>
           ))}
 
+          {/* Общий вывод — отдельный блок с большим textarea */}
           <div className="pt-4">
-            <label className="block text-white font-bold mb-2">Общий вывод (Минимум 20 символов)</label>
+            <label className="block text-white font-bold mb-2">Общий вывод (минимум {MIN_GENERAL} символов)</label>
             <textarea
-              className="w-full bg-slate-950 p-4 rounded-lg border border-slate-700 h-32"
+              className="w-full bg-slate-950 p-4 rounded-lg border border-slate-700 h-32 min-h-[8rem] resize-y"
               value={formData.general_text}
               onChange={(e) => handleChange('general_text', e.target.value)}
               placeholder="Подведите общий итог вашей рецензии..."
@@ -149,13 +159,15 @@ export default function CreateReview() {
           </div>
 
           <div className="flex gap-4">
-            <button 
-              type="button" 
-              onClick={() => navigate(-1)} 
+            {/* Отмена — назад по истории */}
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
               className="px-6 py-3 rounded-xl border border-slate-700 hover:bg-slate-800 transition"
             >
               Отмена
             </button>
+            {/* Кнопка заблокирована при отправке и пока форма невалидна */}
             <button
               type="submit"
               disabled={loading || !isValid}

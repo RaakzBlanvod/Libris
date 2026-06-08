@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { AvatarCircle } from '../../components/Avatar/Avatar';
 import api from '../../api/client';
 import { useToast } from '../../context/ToastContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import EditReviewModal from './EditReviewModal';
 
+// =============================================================================
+// Вкладка «Профиль → Мои рецензии».
+//
+// Грузит /reviews/my (рецензии текущего пользователя; в ответе есть book с
+// google_id, поэтому название книги — ссылка на её страницу). Позволяет
+// редактировать (EditReviewModal) и удалять рецензии (с подтверждением).
+// =============================================================================
 export default function ReviewsTab() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +87,16 @@ export default function ReviewsTab() {
             <div className="flex items-center gap-3">
               <AvatarCircle avatar={review.user?.avatar} username={review.user?.username} size="sm" />
               <div>
-                <h3 className="text-white font-bold">{review.book?.title || 'Книга удалена'}</h3>
+                {review.book?.google_id ? (
+                  <Link
+                    to={`/books/${review.book.google_id}`}
+                    className="text-white font-bold hover:text-blue-400 transition"
+                  >
+                    {review.book.title}
+                  </Link>
+                ) : (
+                  <h3 className="text-white font-bold">{review.book?.title || 'Книга удалена'}</h3>
+                )}
                 <p className="text-slate-500 text-xs">{review.user?.username}</p>
               </div>
             </div>

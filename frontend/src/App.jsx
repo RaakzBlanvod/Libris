@@ -13,9 +13,19 @@ import { ToastProvider } from './context/ToastContext';
 import { ConfirmProvider } from './context/ConfirmContext';
 import CreateReview from './pages/Reviews/CreateReview';
 import Reviews from './pages/Reviews/ReviewsPage';
+import Terms from './pages/Terms/TermsPage';
 import NotFound from './pages/NotFound/NotFoundPage';
 
-// При смене маршрута прокручиваем страницу наверх
+// =============================================================================
+// Корень приложения: глобальные провайдеры, роутер и каркас страницы.
+//
+// Порядок провайдеров: Auth (кто залогинен) → Toast (уведомления) →
+// Confirm (модалки подтверждения) — оборачивают весь Router, поэтому доступны
+// на любой странице. Внутри: общий Header/Footer и область <main> с маршрутами,
+// обёрнутая в ErrorBoundary (ловит ошибки рендера страниц).
+// =============================================================================
+
+// При смене маршрута прокручиваем страницу наверх.
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
@@ -44,6 +54,7 @@ export default function App() {
                     <Route path="/reviews" element={<Reviews />} />
                     <Route path="/books/:id" element={<BookDetail />} />
                     <Route path="/books/:id/review" element={<CreateReview />} />
+                    <Route path="/terms" element={<Terms />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </ErrorBoundary>
