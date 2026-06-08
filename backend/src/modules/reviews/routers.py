@@ -16,7 +16,7 @@ router = APIRouter(prefix="/reviews", tags=["Reviews"])
 
 @router.get(
     "/trending",
-    response_model=List[schemas.ReviewResponse],
+    response_model=List[schemas.MyReviewResponse],
     summary="Трендовые рецензии",
     description="Возвращает список самых залайканных рецензий за последние 7 дней. Сначала проверяет кэш Redis. Если пусто — идет в PostgreSQL.",
 )
@@ -35,7 +35,7 @@ async def get_trending(
 
     reviews_json = json.dumps(
         [
-            schemas.ReviewResponse.model_validate(r).model_dump(mode="json")
+            schemas.MyReviewResponse.model_validate(r).model_dump(mode="json")
             for r in trending_reviews
         ],
         ensure_ascii=False,
