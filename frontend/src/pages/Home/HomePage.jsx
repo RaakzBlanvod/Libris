@@ -2,29 +2,29 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Bookmark, MessageSquare, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../api/client';
+import { getLikedReviewIds, dockLikes } from '../../api/reviews';
 import { useAuth } from '../../context/AuthContext';
 import ReviewCard from '../../components/ReviewCard/ReviewCard';
 import { BookGridSkeleton } from '../../components/Skeleton/Skeleton';
+import { formatAuthors } from '../../utils/formatAuthors';
 
-const SEARCH_PAGE = 12;
+// =============================================================================
+// Главная страница (лендинг + поиск).
+//
+// Два режима в одном компоненте:
+//  - поиск (когда в строке >= 2 символов): живой поиск книг с debounce и
+//    кнопкой «Показать ещё» (растим limit до MAX_LIMIT);
+//  - лендинг (пустой/короткий запрос): быстрые ссылки (для авторизованных),
+//    тренды книг, подборки по жанрам (карусель) и лучшие рецензии недели.
+// Подборки по жанрам кешируются в genreCache, чтобы не дёргать сеть повторно.
+// =============================================================================
+
+const SEARCH_PAGE = 12; // шаг пагинации поиска
 const MAX_LIMIT = 40; // ограничение бэка на size поиска
 
 const GENRES = ['Фэнтези', 'Фантастика', 'Детектив', 'Роман', 'Психология', 'История', 'Бизнес', 'Приключения'];
 
-function renderAuthors(book) {
-  if (!book.authors) return 'Автор не указан';
-  if (Array.isArray(book.authors)) {
-    return book.authors
-      .map((author) =>
-        typeof author === 'object'
-          ? author.name || author.author || author.full_name || Object.values(author)[0]
-          : author
-      )
-      .join(', ');
-  }
-  return String(book.authors);
-}
-
+// Карточка книги в сетке/карусели.
 function BookCard({ book }) {
   return (
     <Link to={`/books/${book.google_id}`} className="group">
@@ -36,7 +36,7 @@ function BookCard({ book }) {
         />
       </div>
       <h3 className="mt-3 font-semibold text-slate-200 truncate">{book.title}</h3>
-      <p className="text-sm text-slate-500 truncate">{renderAuthors(book)}</p>
+      <p className="text-sm text-slate-500 truncate">{formatAuthors(book)}</p>
     </Link>
   );
 }
@@ -71,18 +71,21 @@ export default function HomePage() {
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        const [books, reviews] = await Promise.all([
+        // Тренды рецензий приходят из кэша с is_liked=false — докрашиваем
+        // сердечки списком лайкнутых ID, иначе лайк «слетает» после refresh.
+        const [books, reviews, likedIds] = await Promise.all([
           api.get('/api/v1/books/trending').then((r) => r.data).catch(() => []),
           api.get('/api/v1/reviews/trending').then((r) => r.data).catch(() => []),
+          getLikedReviewIds(user),
         ]);
         setTrendingBooks(books);
-        setTrendingReviews(reviews);
+        setTrendingReviews(dockLikes(reviews, likedIds));
       } finally {
         setIsLoadingTrending(false);
       }
     };
     fetchTrending();
-  }, []);
+  }, [user]);
 
   // Подборка по выбранному жанру (через поиск книг)
   useEffect(() => {
@@ -326,7 +329,7 @@ export default function HomePage() {
                 </div>
                 <div className="grid grid-cols-1 gap-4">
                   {trendingReviews.slice(0, 3).map((review) => (
-                    <ReviewCard key={review.id} review={review} />
+                    <ReviewCard key={review.id} review={review} showBook />
                   ))}
                 </div>
               </div>

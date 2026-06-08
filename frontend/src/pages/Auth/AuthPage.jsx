@@ -4,6 +4,14 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
+// =============================================================================
+// Страница входа/регистрации (маршрут /login). Один компонент, переключаемый
+// флагом isLogin между двумя режимами.
+//
+// Важный нюанс входа: эндпоинт /auth/login на бэке — это OAuth2-форма, поэтому
+// данные шлём как multipart/form-data, причём поле называется `username`, хотя
+// фактически туда кладём email. Регистрация же — обычный JSON.
+// =============================================================================
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ email: '', username: '', password: '' });

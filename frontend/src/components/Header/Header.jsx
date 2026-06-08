@@ -4,6 +4,13 @@ import { BookOpen, Bookmark, MessageSquare, Home, Menu, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { AvatarCircle } from '../Avatar/Avatar';
 
+// =============================================================================
+// Шапка сайта: логотип, навигация и кнопка аккаунта (sticky сверху).
+//
+// На десктопе навигация в строку; на мобильных — бургер-меню (menuOpen).
+// Кнопка справа зависит от авторизации: «Войти» для гостя или аватар+ник со
+// ссылкой на профиль для залогиненного (берём из useAuth).
+// =============================================================================
 const NAV_ITEMS = [
   { to: '/', label: 'Главная', icon: Home, end: true },
   { to: '/reviews', label: 'Рецензии', icon: MessageSquare },

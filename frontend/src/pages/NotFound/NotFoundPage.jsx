@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 
+// Страница 404 — рендерится для любого несуществующего маршрута (path="*").
 export default function NotFoundPage() {
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-4">

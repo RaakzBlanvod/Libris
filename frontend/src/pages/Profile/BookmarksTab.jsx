@@ -2,34 +2,31 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import { useToast } from '../../context/ToastContext';
+import {
+  BOOKMARK_STATUS_KEYS,
+  BOOKMARK_STATUS_MAP,
+  statusEmojiLabel,
+} from '../../constants/bookmarks';
+import { formatAuthors } from '../../utils/formatAuthors';
 
-const BOOKMARK_STATUSES = ['Planned', 'Reading', 'Finished', 'Dropped'];
-
-const statusLabels = {
-  Planned: '📋 Планирую',
-  Reading: '📖 Читаю',
-  Finished: '✅ Прочитано',
-  Dropped: '❌ Бросил',
-};
-
-const statusIcons = {
-  Planned: '📋',
-  Reading: '📖',
-  Finished: '✅',
-  Dropped: '❌',
-};
-
+// =============================================================================
+// Вкладка «Профиль → Закладки» — список закладок выбранного статуса.
+//
+// В отличие от страницы /bookmarks, здесь фильтр по статусу серверный: при
+// смене статуса перезапрашиваем /bookmarks/?status=... Можно переключить статус
+// книги прямо в карточке (эмодзи-кнопки) или удалить закладку.
+// Статусы/эмодзи берём из общих констант.
+// =============================================================================
 export default function BookmarksTab() {
   const [bookmarks, setBookmarks] = useState([]);
-  const [selectedStatus, setSelectedStatus] = useState('Planned');
+  const [selectedStatus, setSelectedStatus] = useState('Planned'); // активный статус-фильтр
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
   const fetchBookmarks = async () => {
     setLoading(true);
     try {
-      // Бэкенд кладёт в каждую закладку объект book (selectinload),
-      // поэтому отдельные запросы за названиями книг не нужны.
+      // Бэк кладёт в каждую закладку объект book — отдельные запросы не нужны.
       const res = await api.get('/api/v1/bookmarks/', {
         params: { status: selectedStatus },
       });
@@ -41,10 +38,12 @@ export default function BookmarksTab() {
     }
   };
 
+  // Перезагружаем список при каждой смене выбранного статуса.
   useEffect(() => {
     fetchBookmarks();
   }, [selectedStatus]);
 
+  // Смена статуса книги (upsert на бэке: тот же эндпоинт, что и добавление).
   const handleStatusChange = async (bookId, newStatus) => {
     try {
       await api.post('/api/v1/bookmarks/', {
@@ -52,9 +51,10 @@ export default function BookmarksTab() {
         status: newStatus,
       });
       if (newStatus === selectedStatus) {
+        // Книга остаётся в текущем списке — перезагружаем, чтобы подтянуть актуальное.
         fetchBookmarks();
       } else {
-        // Закладка ушла в другую категорию — убираем её из текущего списка.
+        // Закладка ушла в другую категорию — убираем её из текущего списка локально.
         setBookmarks(bookmarks.filter((b) => b.book_id !== bookId));
       }
     } catch (err) {
@@ -66,6 +66,7 @@ export default function BookmarksTab() {
   const handleDeleteBookmark = async (bookId) => {
     try {
       await api.delete(`/api/v1/bookmarks/${bookId}`);
+      // Оптимистично убираем из списка (без повторной загрузки).
       setBookmarks(bookmarks.filter((b) => b.book_id !== bookId));
     } catch {
       toast.error('Ошибка при удалении закладки');
@@ -82,9 +83,9 @@ export default function BookmarksTab() {
 
   return (
     <div className="space-y-6">
-      {/* Фильтр по статусу */}
+      {/* Переключатель статуса (серверный фильтр) */}
       <div className="flex flex-wrap gap-2">
-        {BOOKMARK_STATUSES.map((status) => (
+        {BOOKMARK_STATUS_KEYS.map((status) => (
           <button
             key={status}
             onClick={() => setSelectedStatus(status)}
@@ -94,7 +95,7 @@ export default function BookmarksTab() {
                 : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
             }`}
           >
-            {statusLabels[status]}
+            {statusEmojiLabel(status)}
           </button>
         ))}
       </div>
@@ -112,7 +113,7 @@ export default function BookmarksTab() {
                 key={bookmark.id}
                 className="bg-slate-800/50 p-4 rounded-lg border border-slate-700 flex gap-4"
               >
-                {/* Обложка с переходом на книгу */}
+                {/* Обложка-ссылка на страницу книги (или эмодзи-заглушка) */}
                 <Link
                   to={`/books/${book.google_id || ''}`}
                   className="w-20 h-28 flex-shrink-0 rounded overflow-hidden bg-slate-700 group"
@@ -135,25 +136,23 @@ export default function BookmarksTab() {
                     </h3>
                   </Link>
                   <p className="text-sm text-slate-500 mt-1 line-clamp-1">
-                    {book.authors && book.authors.length > 0
-                      ? book.authors.map((a) => a.name).join(', ')
-                      : 'Автор не указан'}
+                    {formatAuthors(book)}
                   </p>
 
-                  {/* Переключение статуса и удаление */}
+                  {/* Быстрая смена статуса (эмодзи) + удаление */}
                   <div className="flex flex-wrap gap-2 mt-3">
-                    {BOOKMARK_STATUSES.map((status) => (
+                    {BOOKMARK_STATUS_KEYS.map((status) => (
                       <button
                         key={status}
                         onClick={() => handleStatusChange(bookmark.book_id, status)}
-                        title={statusLabels[status]}
+                        title={statusEmojiLabel(status)}
                         className={`text-xs px-2 py-1 rounded transition ${
                           bookmark.status === status
                             ? 'bg-blue-600 text-white'
                             : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
                         }`}
                       >
-                        {statusIcons[status]}
+                        {BOOKMARK_STATUS_MAP[status].emoji}
                       </button>
                     ))}
                     <button

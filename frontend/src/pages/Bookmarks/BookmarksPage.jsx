@@ -2,35 +2,30 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import { BookGridSkeleton } from '../../components/Skeleton/Skeleton';
+import { BOOKMARK_STATUS_KEYS, BOOKMARK_STATUS_MAP, statusLabel } from '../../constants/bookmarks';
+import { formatAuthors } from '../../utils/formatAuthors';
 
-// Цвета для разных статусов закладки
-const statusStyles = {
-  Planned: 'bg-slate-800 text-slate-300 border-slate-600',
-  Reading: 'bg-blue-900/50 text-blue-400 border-blue-800',
-  Finished: 'bg-green-900/50 text-green-400 border-green-800',
-  Dropped: 'bg-red-900/50 text-red-400 border-red-800'
-};
+// =============================================================================
+// Страница «Моя библиотека» (маршрут /bookmarks) — сетка сохранённых книг.
+//
+// Загружает все закладки одним запросом (бэк кладёт внутрь каждой объект book).
+// Поиск по названию/автору и фильтр по статусу — клиентские (мгновенные, без
+// обращения к серверу). Оформление статусов берём из общих констант.
+// =============================================================================
 
-const statusLabels = {
-  Planned: 'В планах',
-  Reading: 'Читаю',
-  Finished: 'Прочитано',
-  Dropped: 'Брошено'
-};
-
-const STATUS_FILTERS = ['all', 'Planned', 'Reading', 'Finished', 'Dropped'];
-const filterLabels = { all: 'Все', ...statusLabels };
+// Фильтры статуса: «Все» + сами статусы из общих констант.
+const STATUS_FILTERS = ['all', ...BOOKMARK_STATUS_KEYS];
 
 export default function BookmarksPage() {
   const [bookmarks, setBookmarks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [query, setQuery] = useState(''); // строка поиска
+  const [statusFilter, setStatusFilter] = useState('all'); // активный фильтр статуса
 
   useEffect(() => {
     const fetchBookmarks = async () => {
       try {
-        // Один запрос: бэкенд возвращает массив, где внутри каждой закладки уже есть объект book
+        // Один запрос: в каждой закладке уже есть объект book (selectinload на бэке).
         const res = await api.get('/api/v1/bookmarks/');
         setBookmarks(res.data);
       } catch (err) {
@@ -54,13 +49,13 @@ export default function BookmarksPage() {
     );
   }
 
-  // Счётчики по статусам для бейджей на чипсах
+  // Счётчики книг по каждому статусу — для бейджей на кнопках-фильтрах.
   const counts = bookmarks.reduce((acc, bm) => {
     acc[bm.status] = (acc[bm.status] || 0) + 1;
     return acc;
   }, {});
 
-  // Фильтрация по статусу + поиск по названию/автору (клиентская, мгновенная)
+  // Применяем фильтр по статусу и поиск (по названию и авторам) — на клиенте.
   const q = query.trim().toLowerCase();
   const filtered = bookmarks.filter((bm) => {
     if (statusFilter !== 'all' && bm.status !== statusFilter) return false;
@@ -77,6 +72,7 @@ export default function BookmarksPage() {
         <h1 className="text-3xl font-bold mb-8 text-white">Моя библиотека</h1>
 
         {bookmarks.length === 0 ? (
+          // Пустая библиотека — приглашение найти книги.
           <div className="bg-slate-900 p-20 text-center text-slate-400 border border-slate-800 rounded-3xl shadow-xl max-w-3xl mx-auto">
             <p className="text-xl mb-4">Ваша библиотека пока пуста.</p>
             <Link
@@ -88,7 +84,7 @@ export default function BookmarksPage() {
           </div>
         ) : (
           <>
-            {/* Панель поиска и фильтров */}
+            {/* Панель: поиск + кнопки-фильтры по статусу со счётчиками */}
             <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-8">
               <div className="relative flex-1 max-w-md">
                 <input
@@ -111,6 +107,8 @@ export default function BookmarksPage() {
               <div className="flex flex-wrap gap-2">
                 {STATUS_FILTERS.map((key) => {
                   const count = key === 'all' ? bookmarks.length : counts[key] || 0;
+                  // 'all' → «Все», остальные — подпись статуса из констант.
+                  const label = key === 'all' ? 'Все' : statusLabel(key);
                   return (
                     <button
                       key={key}
@@ -121,7 +119,7 @@ export default function BookmarksPage() {
                           : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
                       }`}
                     >
-                      {filterLabels[key]} <span className="opacity-70">{count}</span>
+                      {label} <span className="opacity-70">{count}</span>
                     </button>
                   );
                 })}
@@ -136,12 +134,14 @@ export default function BookmarksPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                 {filtered.map((bm) => {
                   const book = bm.book || {};
+                  // Оформление бейджа статуса из констант (фолбэк — стиль 'Planned').
+                  const badge = BOOKMARK_STATUS_MAP[bm.status]?.badge || BOOKMARK_STATUS_MAP.Planned.badge;
 
                   return (
                     <Link key={bm.id} to={`/books/${book.google_id || ''}`} className="group flex flex-col h-full">
                       <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-lg transition duration-300 hover:border-blue-500 hover:shadow-blue-900/20 flex flex-col h-full">
 
-                        {/* Обложка и бейдж статуса */}
+                        {/* Обложка + бейдж статуса в углу */}
                         <div className="relative h-64 overflow-hidden bg-slate-950 flex-shrink-0">
                           <img
                             src={book.cover_url || '/placeholder-book.jpg'}
@@ -149,21 +149,19 @@ export default function BookmarksPage() {
                             className="w-full h-full object-cover transition duration-300 group-hover:scale-105 opacity-90 group-hover:opacity-100"
                           />
                           <div className="absolute top-3 right-3">
-                            <span className={`px-3 py-1 text-xs font-semibold rounded-full border shadow-lg backdrop-blur-md ${statusStyles[bm.status] || statusStyles.Planned}`}>
-                              {statusLabels[bm.status] || bm.status}
+                            <span className={`px-3 py-1 text-xs font-semibold rounded-full border shadow-lg backdrop-blur-md ${badge}`}>
+                              {statusLabel(bm.status)}
                             </span>
                           </div>
                         </div>
 
-                        {/* Информация о книге */}
+                        {/* Название + авторы */}
                         <div className="p-4 flex-1 flex flex-col justify-start">
                           <h3 className="font-semibold text-slate-200 line-clamp-2 leading-snug group-hover:text-blue-400 transition">
                             {book.title || 'Без названия'}
                           </h3>
                           <p className="text-sm text-slate-500 mt-1 line-clamp-1">
-                            {book.authors && book.authors.length > 0
-                              ? book.authors.map((a) => a.name).join(', ')
-                              : 'Автор не указан'}
+                            {formatAuthors(book)}
                           </p>
                         </div>
 

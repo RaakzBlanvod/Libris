@@ -1,10 +1,22 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Heart, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { AvatarCircle } from '../Avatar/Avatar';
 
-export default function ReviewCard({ review, currentUserId, onEdit, onDelete }) {
+// =============================================================================
+// Карточка рецензии — используется на странице книги, в трендах и на главной.
+//
+// Возможности:
+//  - лайк с оптимистичным обновлением (мгновенно переключаем UI, при ошибке
+//    откатываем; счётчик крутим сами, т.к. эндпоинт лайка отдаёт только is_liked);
+//  - сворачиваемый «подробный разбор» по критериям;
+//  - кнопки «Редактировать/Удалить» — только у владельца (currentUserId) и
+//    только если переданы обработчики onEdit/onDelete;
+//  - showBook=true показывает строку «к какой книге рецензия» (см. ниже).
+// =============================================================================
+export default function ReviewCard({ review, currentUserId, onEdit, onDelete, showBook = false }) {
   // Достаем данные. Если на бэке поле называется general_text, берем его, иначе text
   const { id, user, plot_rating, characters_rating, style_rating, pacing_rating, world_rating, general_text, text, created_at } = review;
   const reviewText = general_text || text;
@@ -18,6 +30,13 @@ export default function ReviewCard({ review, currentUserId, onEdit, onDelete }) 
   const [likeCount, setLikeCount] = useState(review.like_count || 0);
   const [liking, setLiking] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  // Список рецензий мог обновиться (докрашивание лайков, повторная загрузка),
+  // а key у карточки не меняется — синхронизируем локальный стейт с пропами.
+  useEffect(() => {
+    setIsLiked(!!review.is_liked);
+    setLikeCount(review.like_count || 0);
+  }, [review.is_liked, review.like_count]);
 
   // Считаем среднюю оценку по всем критериям (если они пришли с бэка)
   const ratings = [plot_rating, characters_rating, style_rating, pacing_rating, world_rating].filter(Boolean);
@@ -76,20 +95,28 @@ export default function ReviewCard({ review, currentUserId, onEdit, onDelete }) 
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+      {/* К какой книге относится рецензия (для трендов/лучших рецензий).
+          Если у книги есть google_id — это ссылка на страницу книги,
+          иначе показываем только название (ссылку включит бэкенд, добавив google_id). */}
+      {showBook && review.book?.title && (
+        review.book.google_id ? (
+          <Link
+            to={`/books/${review.book.google_id}`}
+            className="inline-flex items-center gap-1.5 text-sm text-indigo-400 hover:text-indigo-300 font-medium transition"
+          >
+            📖 Рецензия на книгу «{review.book.title}»
+          </Link>
+        ) : (
+          <p className="inline-flex items-center gap-1.5 text-sm text-slate-400 font-medium">
+            📖 Рецензия на книгу «{review.book.title}»
+          </p>
+        )
+      )}
+
       {/* Шапка: Автор и дата */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {user?.avatar ? (
-            <img
-              src={user.avatar}
-              alt={user.username}
-              className="w-10 h-10 rounded-full object-cover border border-slate-700"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-indigo-950 text-indigo-400 border border-indigo-800 flex items-center justify-center font-bold text-sm">
-              {user?.username?.substring(0, 2).toUpperCase() || '??'}
-            </div>
-          )}
+          <AvatarCircle avatar={user?.avatar} username={user?.username} size="md" />
           <div>
             <h4 className="font-semibold text-white">{user?.username || 'Пользователь'}</h4>
             <p className="text-xs text-slate-500">{formattedDate}</p>

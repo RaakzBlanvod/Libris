@@ -1,22 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../../api/client';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
+// =============================================================================
+// Модалка редактирования профиля (имя, биография, любимые жанры, аватар).
+//
+// Жанры в форме хранятся одной строкой «через запятую» — на бэк уходят массивом.
+// Профиль и аватар сохраняются разными запросами: PATCH /users/me (текстовые
+// поля) и POST /users/me/avatar (файл, multipart) — только если файл выбран.
+// =============================================================================
 export default function EditProfileModal({ user, onClose, onUpdate }) {
   const [formData, setFormData] = useState({
     username: user.username,
     bio: user.bio || '',
+    // массив жанров → строка для текстового поля
     favorite_genres: user.favorite_genres?.join(', ') || ''
   });
-  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null); // выбранный файл аватара
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Закрытие по Escape
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  // Закрытие по Escape (общий хук вместо ручного слушателя).
+  useEscapeKey(onClose);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,6 +29,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
     setError('');
 
     try {
+      // Строку «Фантастика, Детектив» превращаем в массив без пустых элементов.
       const genres = formData.favorite_genres
         .split(',')
         .map(s => s.trim())
@@ -35,6 +41,7 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
         favorite_genres: genres
       });
 
+      // Аватар грузим отдельным multipart-запросом — только если выбрали файл.
       if (avatarFile) {
         const formDataUpload = new FormData();
         formDataUpload.append('file', avatarFile);
@@ -43,9 +50,10 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
         });
       }
 
-      onUpdate();
+      onUpdate(); // родитель перезапросит профиль
       onClose();
     } catch (err) {
+      // Бэк отдаёт массив ошибок валидации — показываем первую.
       setError(err.response?.data?.detail?.[0]?.msg || 'Ошибка при сохранении');
     } finally {
       setLoading(false);

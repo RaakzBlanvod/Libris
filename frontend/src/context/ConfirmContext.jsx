@@ -1,5 +1,14 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 
+// =============================================================================
+// Контекст модалок подтверждения.
+//
+// useConfirm() возвращает функцию confirm(options) → Promise<boolean>:
+//   const ok = await confirm({ title, message, confirmText, danger });
+// Промис резолвится true (подтвердил) / false (отмена или Escape). Это удобнее
+// нативного window.confirm и оформлено в стиле сайта. Используется перед
+// необратимыми действиями (удаление рецензии, аккаунта).
+// =============================================================================
 const ConfirmContext = createContext(null);
 
 export function ConfirmProvider({ children }) {
