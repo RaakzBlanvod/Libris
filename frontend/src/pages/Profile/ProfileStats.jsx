@@ -31,9 +31,12 @@ export default function ProfileStats() {
   useEffect(() => {
     const load = async () => {
       try {
+        // toArray гарантирует массив даже если ответ внезапно не массив
+        // (например, прокси вернул HTML вместо JSON) — иначе .filter/.reduce упадут.
+        const toArray = (r) => (Array.isArray(r.data) ? r.data : []);
         const [rev, bm] = await Promise.all([
-          api.get('/api/v1/reviews/my').then((r) => r.data).catch(() => []),
-          api.get('/api/v1/bookmarks/').then((r) => r.data).catch(() => []),
+          api.get('/api/v1/reviews/my').then(toArray).catch(() => []),
+          api.get('/api/v1/bookmarks/').then(toArray).catch(() => []),
         ]);
         setReviews(rev);
         setBookmarks(bm);

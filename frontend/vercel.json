@@ -1,12 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://libris-backend-ke58.onrender.com/api/:path*"
+      "source": "/api/(.*)",
+      "destination": "https://libris-backend-ke58.onrender.com/api/$1"
     },
     {
-      "source": "/static/:path*",
-      "destination": "https://libris-backend-ke58.onrender.com/static/:path*"
+      "source": "/static/(.*)",
+      "destination": "https://libris-backend-ke58.onrender.com/static/$1"
     },
     {
       "source": "/(.*)",

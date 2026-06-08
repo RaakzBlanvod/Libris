@@ -4,6 +4,7 @@ import api from '../../api/client';
 import { BookGridSkeleton } from '../../components/Skeleton/Skeleton';
 import { BOOKMARK_STATUS_KEYS, BOOKMARK_STATUS_MAP, statusLabel } from '../../constants/bookmarks';
 import { formatAuthors } from '../../utils/formatAuthors';
+import { secureUrl } from '../../utils/secureUrl';
 
 // =============================================================================
 // Страница «Моя библиотека» (маршрут /bookmarks) — сетка сохранённых книг.
@@ -27,7 +28,7 @@ export default function BookmarksPage() {
       try {
         // Один запрос: в каждой закладке уже есть объект book (selectinload на бэке).
         const res = await api.get('/api/v1/bookmarks/');
-        setBookmarks(res.data);
+        setBookmarks(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error('Ошибка при получении списка закладок:', err);
       } finally {
@@ -144,7 +145,7 @@ export default function BookmarksPage() {
                         {/* Обложка + бейдж статуса в углу */}
                         <div className="relative h-64 overflow-hidden bg-slate-950 flex-shrink-0">
                           <img
-                            src={book.cover_url || '/placeholder-book.jpg'}
+                            src={secureUrl(book.cover_url) || '/placeholder-book.jpg'}
                             alt={book.title || 'Обложка книги'}
                             className="w-full h-full object-cover transition duration-300 group-hover:scale-105 opacity-90 group-hover:opacity-100"
                           />

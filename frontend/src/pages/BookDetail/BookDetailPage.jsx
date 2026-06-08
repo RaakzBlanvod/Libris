@@ -11,6 +11,7 @@ import { ReviewListSkeleton } from '../../components/Skeleton/Skeleton';
 import { BOOKMARK_STATUSES, statusEmojiLabel } from '../../constants/bookmarks';
 import { sortReviews } from '../../utils/sortReviews';
 import { formatAuthors } from '../../utils/formatAuthors';
+import { secureUrl } from '../../utils/secureUrl';
 
 // =============================================================================
 // Страница книги (маршрут /books/:id, где :id — google_id).
@@ -47,7 +48,7 @@ export default function BookDetailPage() {
           api.get(`/api/v1/books/${id}`),
           // Закладки только для залогиненного; гостю — пустой список.
           currentUser
-            ? api.get('/api/v1/bookmarks/').then((r) => r.data).catch(() => [])
+            ? api.get('/api/v1/bookmarks/').then((r) => (Array.isArray(r.data) ? r.data : [])).catch(() => [])
             : Promise.resolve([]),
         ]);
         setBook(bookRes.data);
@@ -171,7 +172,7 @@ export default function BookDetailPage() {
         {/* СЕКЦИЯ С КНИГОЙ: обложка + действия слева, описание справа */}
         <div className="grid md:grid-cols-3 gap-12">
           <div className="space-y-6">
-            <img src={book.cover_url || '/placeholder-book.jpg'} alt={book.title} className="w-full rounded-2xl shadow-2xl border border-slate-800" />
+            <img src={secureUrl(book.cover_url) || '/placeholder-book.jpg'} alt={book.title} className="w-full rounded-2xl shadow-2xl border border-slate-800" />
 
             {/* Закладка: если книга уже в библиотеке — выбор статуса, иначе кнопка добавления */}
             {bookmarkStatus ? (
@@ -334,7 +335,7 @@ export default function BookDetailPage() {
                 <Link key={b.google_id} to={`/books/${b.google_id}`} className="group">
                   <div className="overflow-hidden rounded-xl shadow-lg border border-slate-800 bg-slate-900">
                     <img
-                      src={b.cover_url || '/placeholder-book.jpg'}
+                      src={secureUrl(b.cover_url) || '/placeholder-book.jpg'}
                       alt={b.title}
                       className="w-full h-56 object-cover transition duration-300 group-hover:scale-105"
                     />
