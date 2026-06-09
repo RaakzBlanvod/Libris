@@ -90,7 +90,7 @@ async def get_book_details(
     try:
         book = await BookService.get_book_by_google_id(db, google_id)
         if not book:
-            metadata = await BookService._fetch_single_google_book(google_id)
+            metadata = await BookService.fetch_single_google_book(google_id)
             book = await BookService.get_or_create_book(db, metadata)
         return book
     except ValueError as e:
