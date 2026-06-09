@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { AvatarCircle } from '../../components/Avatar/Avatar';
-import api from '../../api/client';
-import { useToast } from '../../context/ToastContext';
-import { useConfirm } from '../../context/ConfirmContext';
-import EditReviewModal from './EditReviewModal';
+import { AvatarCircle } from '@/components/Avatar/Avatar';
+import { getMyReviews, removeReview } from '@/api/reviews';
+import { useToast } from '@/context/ToastContext';
+import { useConfirm } from '@/context/ConfirmContext';
+import EditReviewModal from '@/components/EditReviewModal/EditReviewModal';
 
 // =============================================================================
 // Вкладка «Профиль → Мои рецензии».
@@ -23,8 +23,7 @@ export default function ReviewsTab() {
 
   const fetchReviews = async () => {
     try {
-      const res = await api.get('/api/v1/reviews/my');
-      setReviews(res.data);
+      setReviews(await getMyReviews());
     } catch (err) {
       console.error('Ошибка загрузки рецензий:', err);
     } finally {
@@ -45,7 +44,7 @@ export default function ReviewsTab() {
     });
     if (!ok) return;
     try {
-      await api.delete(`/api/v1/reviews/${reviewId}`);
+      await removeReview(reviewId);
       setReviews(reviews.filter(r => r.id !== reviewId));
       toast.success('Рецензия удалена');
     } catch {

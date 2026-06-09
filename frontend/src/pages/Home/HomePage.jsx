@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Bookmark, MessageSquare, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
-import api from '../../api/client';
-import { getLikedReviewIds, dockLikes } from '../../api/reviews';
-import { useAuth } from '../../context/AuthContext';
-import ReviewCard from '../../components/ReviewCard/ReviewCard';
-import { BookGridSkeleton } from '../../components/Skeleton/Skeleton';
-import { formatAuthors } from '../../utils/formatAuthors';
-import { secureUrl } from '../../utils/secureUrl';
+import { getTrendingBooks, searchBooks } from '@/api/books';
+import { getTrendingReviews, getLikedReviewIds, dockLikes } from '@/api/reviews';
+import { useAuth } from '@/context/AuthContext';
+import ReviewCard from '@/components/ReviewCard/ReviewCard';
+import { BookGridSkeleton } from '@/components/Skeleton/Skeleton';
+import { formatAuthors } from '@/utils/formatAuthors';
+import { secureUrl } from '@/utils/secureUrl';
 
 // =============================================================================
 // Главная страница (лендинг + поиск).
@@ -75,12 +75,12 @@ export default function HomePage() {
         // Тренды рецензий приходят из кэша с is_liked=false — докрашиваем
         // сердечки списком лайкнутых ID, иначе лайк «слетает» после refresh.
         const [books, reviews, likedIds] = await Promise.all([
-          api.get('/api/v1/books/trending').then((r) => r.data).catch(() => []),
-          api.get('/api/v1/reviews/trending').then((r) => r.data).catch(() => []),
+          getTrendingBooks().catch(() => []),
+          getTrendingReviews().catch(() => []),
           getLikedReviewIds(user),
         ]);
-        setTrendingBooks(Array.isArray(books) ? books : []);
-        setTrendingReviews(dockLikes(reviews, likedIds)); // dockLikes сам защищён от не-массива
+        setTrendingBooks(books);
+        setTrendingReviews(dockLikes(reviews, likedIds));
       } finally {
         setIsLoadingTrending(false);
       }
@@ -98,12 +98,11 @@ export default function HomePage() {
     }
     let cancelled = false;
     setLoadingGenre(true);
-    api
-      .get(`/api/v1/books/search?q=${encodeURIComponent(activeGenre)}&limit=10`)
-      .then((res) => {
+    searchBooks(activeGenre, 10)
+      .then((data) => {
         if (cancelled) return;
-        genreCache.current[activeGenre] = res.data;
-        setGenreBooks(res.data);
+        genreCache.current[activeGenre] = data;
+        setGenreBooks(data);
       })
       .catch(() => {
         if (!cancelled) setGenreBooks([]);
@@ -125,10 +124,7 @@ export default function HomePage() {
     const handle = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await api.get(
-          `/api/v1/books/search?q=${encodeURIComponent(trimmed)}&limit=${limit}`
-        );
-        setSearchResults(res.data);
+        setSearchResults(await searchBooks(trimmed, limit));
       } catch (err) {
         console.error('Ошибка поиска:', err);
         setSearchResults([]);

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { AvatarCircle } from '../../components/Avatar/Avatar';
-import api from '../../api/client';
-import { useToast } from '../../context/ToastContext';
-import { useConfirm } from '../../context/ConfirmContext';
+import { useAuth } from '@/context/AuthContext';
+import { AvatarCircle } from '@/components/Avatar/Avatar';
+import { getMe, deleteMe } from '@/api/users';
+import { useToast } from '@/context/ToastContext';
+import { useConfirm } from '@/context/ConfirmContext';
 import EditProfileModal from './EditProfileModal';
 import ReviewsTab from './ReviewsTab';
 import BookmarksTab from './BookmarksTab';
@@ -56,8 +56,7 @@ export default function ProfilePage() {
   }
 
   const handleUpdateProfile = async () => {
-    const res = await api.get('/api/v1/users/me');
-    setUser(res.data);
+    setUser(await getMe());
   };
 
   const handleDeleteAccount = async () => {
@@ -69,7 +68,7 @@ export default function ProfilePage() {
     });
     if (!ok) return;
     try {
-      await api.delete('/api/v1/users/me');
+      await deleteMe();
       logout();
     } catch {
       toast.error('Ошибка при удалении аккаунта');

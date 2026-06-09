@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../api/client';
-import { BookGridSkeleton } from '../../components/Skeleton/Skeleton';
-import { BOOKMARK_STATUS_KEYS, BOOKMARK_STATUS_MAP, statusLabel } from '../../constants/bookmarks';
-import { formatAuthors } from '../../utils/formatAuthors';
-import { secureUrl } from '../../utils/secureUrl';
+import { getBookmarks } from '@/api/bookmarks';
+import { BookGridSkeleton } from '@/components/Skeleton/Skeleton';
+import { BOOKMARK_STATUS_KEYS, BOOKMARK_STATUS_MAP, statusLabel } from '@/constants/bookmarks';
+import { formatAuthors } from '@/utils/formatAuthors';
+import { secureUrl } from '@/utils/secureUrl';
 
 // =============================================================================
 // Страница «Моя библиотека» (маршрут /bookmarks) — сетка сохранённых книг.
@@ -27,8 +27,7 @@ export default function BookmarksPage() {
     const fetchBookmarks = async () => {
       try {
         // Один запрос: в каждой закладке уже есть объект book (selectinload на бэке).
-        const res = await api.get('/api/v1/bookmarks/');
-        setBookmarks(Array.isArray(res.data) ? res.data : []);
+        setBookmarks(await getBookmarks());
       } catch (err) {
         console.error('Ошибка при получении списка закладок:', err);
       } finally {

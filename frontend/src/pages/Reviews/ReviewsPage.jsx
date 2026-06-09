@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import api from '../../api/client';
-import { getLikedReviewIds, dockLikes } from '../../api/reviews';
-import { useAuth } from '../../context/AuthContext';
-import ReviewCard from '../../components/ReviewCard/ReviewCard';
-import { ReviewListSkeleton } from '../../components/Skeleton/Skeleton';
-import { sortReviews } from '../../utils/sortReviews';
+import { getTrendingReviews, getLikedReviewIds, dockLikes } from '@/api/reviews';
+import { useAuth } from '@/context/AuthContext';
+import ReviewCard from '@/components/ReviewCard/ReviewCard';
+import { ReviewListSkeleton } from '@/components/Skeleton/Skeleton';
+import { sortReviews } from '@/utils/sortReviews';
 
 // =============================================================================
 // Страница «Лучшие рецензии» (маршрут /reviews).
@@ -27,13 +26,13 @@ export default function ReviewsPage() {
     const fetchTrending = async () => {
       try {
         // Параллельно: сами тренды и список лайкнутых ID текущего пользователя.
-        const [trendingRes, likedIds] = await Promise.all([
-          api.get('/api/v1/reviews/trending'),
+        const [trending, likedIds] = await Promise.all([
+          getTrendingReviews(),
           getLikedReviewIds(user),
         ]);
 
         // Проставляем is_liked поверх кэшированных трендов.
-        setReviews(dockLikes(trendingRes.data, likedIds));
+        setReviews(dockLikes(trending, likedIds));
       } catch (err) {
         console.error('Ошибка загрузки трендовых рецензий:', err);
       } finally {

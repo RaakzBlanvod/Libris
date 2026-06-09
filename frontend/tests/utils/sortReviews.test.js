@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sortReviews } from './sortReviews';
+import { sortReviews } from '@/utils/sortReviews';
 
 const data = [
   { id: 1, overall_rating: 5, like_count: 2, created_at: '2024-01-01' },

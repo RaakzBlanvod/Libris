@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import RatingStepper from './RatingStepper';
+import RatingStepper from '@/components/RatingStepper/RatingStepper';
 
 // Обёртка с состоянием: RatingStepper контролируемый, поэтому для проверки
 // кликов нужен родитель, который реально меняет value.

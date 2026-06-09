@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Heart, ChevronDown, ChevronUp } from 'lucide-react';
-import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
-import { AvatarCircle } from '../Avatar/Avatar';
+import { toggleLike } from '@/api/reviews';
+import { useAuth } from '@/context/AuthContext';
+import { AvatarCircle } from '@/components/Avatar/Avatar';
 
 // =============================================================================
 // Карточка рецензии — используется на странице книги, в трендах и на главной.
@@ -77,8 +77,8 @@ export default function ReviewCard({ review, currentUserId, onEdit, onDelete, sh
     setLikeCount(prevCount + (prevLiked ? -1 : 1));
 
     try {
-      const res = await api.post(`/api/v1/reviews/${id}/like`);
-      const serverLiked = res.data?.is_liked;
+      const res = await toggleLike(id);
+      const serverLiked = res?.is_liked;
       // Синхронизируемся с ответом сервера (на случай рассинхрона)
       if (typeof serverLiked === 'boolean' && serverLiked !== !prevLiked) {
         setIsLiked(serverLiked);

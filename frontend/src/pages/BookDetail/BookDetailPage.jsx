@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Bookmark, MessageSquare } from 'lucide-react';
-import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
-import { useConfirm } from '../../context/ConfirmContext';
-import ReviewCard from '../../components/ReviewCard/ReviewCard';
-import EditReviewModal from '../Profile/EditReviewModal';
-import { ReviewListSkeleton } from '../../components/Skeleton/Skeleton';
-import { BOOKMARK_STATUSES, statusEmojiLabel } from '../../constants/bookmarks';
-import { sortReviews } from '../../utils/sortReviews';
-import { formatAuthors } from '../../utils/formatAuthors';
-import { secureUrl } from '../../utils/secureUrl';
+import { getBook, searchBooks } from '@/api/books';
+import { getBookmarks, setBookmark, removeBookmark } from '@/api/bookmarks';
+import { getBookReviews, removeReview } from '@/api/reviews';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
+import { useConfirm } from '@/context/ConfirmContext';
+import ReviewCard from '@/components/ReviewCard/ReviewCard';
+import EditReviewModal from '@/components/EditReviewModal/EditReviewModal';
+import { ReviewListSkeleton } from '@/components/Skeleton/Skeleton';
+import { BOOKMARK_STATUSES, statusEmojiLabel } from '@/constants/bookmarks';
+import { sortReviews } from '@/utils/sortReviews';
+import { formatAuthors } from '@/utils/formatAuthors';
+import { secureUrl } from '@/utils/secureUrl';
 
 // =============================================================================
 // Страница книги (маршрут /books/:id, где :id — google_id).
@@ -44,16 +46,14 @@ export default function BookDetailPage() {
     if (!id) return;
     const loadPageData = async () => {
       try {
-        const [bookRes, bookmarksRes] = await Promise.all([
-          api.get(`/api/v1/books/${id}`),
+        const [bookData, bookmarks] = await Promise.all([
+          getBook(id),
           // Закладки только для залогиненного; гостю — пустой список.
-          currentUser
-            ? api.get('/api/v1/bookmarks/').then((r) => (Array.isArray(r.data) ? r.data : [])).catch(() => [])
-            : Promise.resolve([]),
+          currentUser ? getBookmarks().catch(() => []) : Promise.resolve([]),
         ]);
-        setBook(bookRes.data);
+        setBook(bookData);
         // Ищем эту книгу среди закладок пользователя по внутреннему id.
-        const bm = bookmarksRes.find((b) => b.book_id === bookRes.data.id);
+        const bm = bookmarks.find((b) => b.book_id === bookData.id);
         setBookmarkStatus(bm ? bm.status : null);
       } catch {
         setError('Не удалось загрузить данные книги.');
@@ -67,8 +67,7 @@ export default function BookDetailPage() {
     if (!book?.id) return;
     setLoadingReviews(true);
     try {
-      const res = await api.get(`/api/v1/reviews/book/${book.id}`);
-      setReviews(res.data);
+      setReviews(await getBookReviews(book.id));
     } catch (err) {
       console.error('Не удалось загрузить рецензии:', err);
     } finally {
@@ -89,11 +88,10 @@ export default function BookDetailPage() {
       return;
     }
     let cancelled = false;
-    api
-      .get(`/api/v1/books/search?q=${encodeURIComponent(author)}&limit=12`)
-      .then((res) => {
+    searchBooks(author, 12)
+      .then((data) => {
         if (cancelled) return;
-        setSimilarBooks(res.data.filter((b) => b.google_id !== book.google_id).slice(0, 5));
+        setSimilarBooks(data.filter((b) => b.google_id !== book.google_id).slice(0, 5));
       })
       .catch(() => {});
     return () => {
@@ -109,7 +107,7 @@ export default function BookDetailPage() {
     }
     if (!book?.id) return;
     try {
-      await api.post('/api/v1/bookmarks/', { book_id: book.id, status });
+      await setBookmark(book.id, status);
       setBookmarkStatus(status);
     } catch {
       toast.error('Не удалось изменить статус закладки.');
@@ -119,7 +117,7 @@ export default function BookDetailPage() {
   const handleRemoveBookmark = async () => {
     if (!book?.id) return;
     try {
-      await api.delete(`/api/v1/bookmarks/${book.id}`);
+      await removeBookmark(book.id);
       setBookmarkStatus(null);
     } catch {
       toast.error('Не удалось убрать книгу из библиотеки.');
@@ -137,10 +135,9 @@ export default function BookDetailPage() {
     });
     if (!ok) return;
     try {
-      await api.delete(`/api/v1/reviews/${reviewId}`);
+      await removeReview(reviewId);
       await loadReviews();
-      const res = await api.get(`/api/v1/books/${id}`);
-      setBook(res.data);
+      setBook(await getBook(id));
       toast.success('Рецензия удалена');
     } catch {
       toast.error('Не удалось удалить рецензию.');
@@ -151,8 +148,7 @@ export default function BookDetailPage() {
   const handleReviewUpdated = async () => {
     setEditingReview(null);
     await loadReviews();
-    const res = await api.get(`/api/v1/books/${id}`);
-    setBook(res.data);
+    setBook(await getBook(id));
   };
 
   if (error) return <div className="min-h-screen bg-slate-950 p-20 text-center text-red-400 font-semibold">{error}</div>;

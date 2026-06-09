@@ -1,5 +1,6 @@
 import { createContext, useState, useContext, useEffect } from 'react';
-import api from '../api/client';
+import { getMe } from '@/api/users';
+import { logout as logoutRequest } from '@/api/auth';
 
 // =============================================================================
 // Контекст авторизации: хранит текущего пользователя и методы входа/выхода.
@@ -18,8 +19,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchMe = async () => {
     try {
-      const res = await api.get('/api/v1/users/me');
-      setUser(res.data);
+      setUser(await getMe());
     } catch {
       setUser(null);
     } finally {
@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
     const refreshToken = localStorage.getItem('refresh_token');
     if (refreshToken) {
       try {
-        await api.post('/api/v1/auth/logout', { refresh_token: refreshToken });
+        await logoutRequest(refreshToken);
       } catch (err) {
         console.error('Не удалось отозвать токен на сервере:', err);
       }

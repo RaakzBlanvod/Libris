@@ -1,17 +1,18 @@
 import { useState } from 'react';
-import api from '../../api/client';
-import { REVIEW_CATEGORIES, MIN_TEXT, MIN_GENERAL } from '../../constants/reviews';
-import RatingStepper from '../../components/RatingStepper/RatingStepper';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { updateReview } from '@/api/reviews';
+import { REVIEW_CATEGORIES, MIN_TEXT, MIN_GENERAL } from '@/constants/reviews';
+import RatingStepper from '@/components/RatingStepper/RatingStepper';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 
 // =============================================================================
-// Модалка редактирования существующей рецензии.
+// Модалка редактирования существующей рецензии (общий компонент: используется
+// и в «Профиль → Мои рецензии», и на странице книги).
 //
-// Открывается из «Мои рецензии» (профиль), со страницы книги и т.п. Layout
-// повторяет страницу создания: 5 критериев (оценка-степпер + текст) + общий
-// вывод, с той же клиентской валидацией минимальных длин (MIN_TEXT/MIN_GENERAL,
-// зеркалят схему ReviewUpdate на бэке). Сохранение — PATCH /reviews/{id}.
-// onUpdate вызывается после успешного сохранения (родитель перезагружает данные).
+// Layout повторяет страницу создания: 5 критериев (оценка-степпер + текст) +
+// общий вывод, с той же клиентской валидацией минимальных длин
+// (MIN_TEXT/MIN_GENERAL, зеркалят схему ReviewUpdate на бэке).
+// Сохранение — updateReview (PATCH). onUpdate вызывается после успешного
+// сохранения (родитель перезагружает данные).
 // =============================================================================
 export default function EditReviewModal({ review, onClose, onUpdate }) {
   // Инициализируем форму текущими значениями рецензии (оценки — с фолбэком 5).
@@ -52,7 +53,7 @@ export default function EditReviewModal({ review, onClose, onUpdate }) {
     setError('');
 
     try {
-      await api.patch(`/api/v1/reviews/${review.id}`, formData);
+      await updateReview(review.id, formData);
       onUpdate();
     } catch (err) {
       setError(err.response?.data?.detail?.[0]?.msg || 'Ошибка при сохранении');

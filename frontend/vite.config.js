@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from 'node:url'
 // defineConfig берём из 'vitest/config' — это тот же конфиг Vite, но с типами
 // для блока test (Vitest). На прод-сборку (vite build) блок test не влияет.
 import { defineConfig } from 'vitest/config'
@@ -10,6 +11,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  resolve: {
+    alias: {
+      // Алиас "@" → папка src. Позволяет писать "@/api/books" вместо "../../api/books".
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   server: {
     proxy: {
       '/api': {
@@ -31,11 +38,13 @@ export default defineConfig({
   //  - globals: true — describe/it/expect доступны без импорта (мы всё равно
   //    импортируем их явно в тестах, чтобы не спорить с ESLint);
   //  - setupFiles — подключает матчеры @testing-library/jest-dom;
+  //  - include — тесты лежат вне src, в отдельной папке tests/;
   //  - css: false — не обрабатываем CSS в тестах (быстрее, Tailwind тут не нужен).
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: './src/test/setup.js',
+    setupFiles: './tests/setup.js',
+    include: ['tests/**/*.{test,spec}.{js,jsx}'],
     css: false,
   },
 })

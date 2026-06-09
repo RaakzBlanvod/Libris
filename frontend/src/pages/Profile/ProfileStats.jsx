@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import api from '../../api/client';
-import { BOOKMARK_STATUSES } from '../../constants/bookmarks';
+import { getMyReviews } from '@/api/reviews';
+import { getBookmarks } from '@/api/bookmarks';
+import { BOOKMARK_STATUSES } from '@/constants/bookmarks';
 
 // =============================================================================
 // Вкладка «Профиль» → блок статистики пользователя.
@@ -31,12 +32,11 @@ export default function ProfileStats() {
   useEffect(() => {
     const load = async () => {
       try {
-        // toArray гарантирует массив даже если ответ внезапно не массив
-        // (например, прокси вернул HTML вместо JSON) — иначе .filter/.reduce упадут.
-        const toArray = (r) => (Array.isArray(r.data) ? r.data : []);
+        // Обе функции гарантируют массив (защита внутри API-слоя),
+        // .catch — на случай сетевой ошибки.
         const [rev, bm] = await Promise.all([
-          api.get('/api/v1/reviews/my').then(toArray).catch(() => []),
-          api.get('/api/v1/bookmarks/').then(toArray).catch(() => []),
+          getMyReviews().catch(() => []),
+          getBookmarks().catch(() => []),
         ]);
         setReviews(rev);
         setBookmarks(bm);

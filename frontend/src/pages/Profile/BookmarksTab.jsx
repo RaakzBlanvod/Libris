@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../api/client';
-import { useToast } from '../../context/ToastContext';
+import { getBookmarks, setBookmark, removeBookmark } from '@/api/bookmarks';
+import { useToast } from '@/context/ToastContext';
 import {
   BOOKMARK_STATUS_KEYS,
   BOOKMARK_STATUS_MAP,
   statusEmojiLabel,
-} from '../../constants/bookmarks';
-import { formatAuthors } from '../../utils/formatAuthors';
-import { secureUrl } from '../../utils/secureUrl';
+} from '@/constants/bookmarks';
+import { formatAuthors } from '@/utils/formatAuthors';
+import { secureUrl } from '@/utils/secureUrl';
 
 // =============================================================================
 // Вкладка «Профиль → Закладки» — список закладок выбранного статуса.
@@ -28,10 +28,7 @@ export default function BookmarksTab() {
     setLoading(true);
     try {
       // Бэк кладёт в каждую закладку объект book — отдельные запросы не нужны.
-      const res = await api.get('/api/v1/bookmarks/', {
-        params: { status: selectedStatus },
-      });
-      setBookmarks(Array.isArray(res.data) ? res.data : []);
+      setBookmarks(await getBookmarks(selectedStatus));
     } catch (err) {
       console.error('Ошибка загрузки закладок:', err);
     } finally {
@@ -47,10 +44,7 @@ export default function BookmarksTab() {
   // Смена статуса книги (upsert на бэке: тот же эндпоинт, что и добавление).
   const handleStatusChange = async (bookId, newStatus) => {
     try {
-      await api.post('/api/v1/bookmarks/', {
-        book_id: bookId,
-        status: newStatus,
-      });
+      await setBookmark(bookId, newStatus);
       if (newStatus === selectedStatus) {
         // Книга остаётся в текущем списке — перезагружаем, чтобы подтянуть актуальное.
         fetchBookmarks();
@@ -66,7 +60,7 @@ export default function BookmarksTab() {
 
   const handleDeleteBookmark = async (bookId) => {
     try {
-      await api.delete(`/api/v1/bookmarks/${bookId}`);
+      await removeBookmark(bookId);
       // Оптимистично убираем из списка (без повторной загрузки).
       setBookmarks(bookmarks.filter((b) => b.book_id !== bookId));
     } catch {

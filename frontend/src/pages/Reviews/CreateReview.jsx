@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
-import { REVIEW_CATEGORIES as categories, MIN_TEXT, MIN_GENERAL } from '../../constants/reviews';
-import RatingStepper from '../../components/RatingStepper/RatingStepper';
+import { getBook } from '@/api/books';
+import { createReview } from '@/api/reviews';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
+import { REVIEW_CATEGORIES as categories, MIN_TEXT, MIN_GENERAL } from '@/constants/reviews';
+import RatingStepper from '@/components/RatingStepper/RatingStepper';
 
 // =============================================================================
 // Страница создания рецензии на книгу (маршрут /books/:id/review).
@@ -42,8 +43,8 @@ export default function CreateReview() {
   // Грузим книгу по google_id из URL (нужен её внутренний id для POST).
   useEffect(() => {
     if (!id) return;
-    api.get(`/api/v1/books/${id}`)
-      .then(res => setBook(res.data))
+    getBook(id)
+      .then(setBook)
       .catch(err => console.error("Ошибка загрузки книги:", err));
   }, [id]);
 
@@ -83,7 +84,7 @@ export default function CreateReview() {
 
     try {
       // Создаём рецензию по внутреннему id книги и возвращаемся на страницу книги.
-      await api.post(`/api/v1/reviews/book/${book.id}`, formData);
+      await createReview(book.id, formData);
       toast.success("Рецензия успешно опубликована!");
       navigate(`/books/${id}`);
     } catch (err) {

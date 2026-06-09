@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { secureUrl } from './secureUrl';
+import { secureUrl } from '@/utils/secureUrl';
 
 describe('secureUrl', () => {
   it('http → https', () => {
