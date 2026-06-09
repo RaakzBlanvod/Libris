@@ -57,13 +57,23 @@ jobs:
         with:
           node-version: '20'
       - name: Install dependencies
-        run: |
-          if [ -f "package-lock.json" ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm ci
         working-directory: frontend
       - name: Lint frontend
-        run: npm run lint || echo "No lint script yet"
+        run: npm run lint
+        working-directory: frontend
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Run tests
+        run: npm run test:run
         working-directory: frontend
