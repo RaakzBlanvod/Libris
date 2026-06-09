@@ -4,9 +4,12 @@ import { Link } from 'react-router-dom';
 // Подвал сайта: копирайт + ссылки на «Условия использования» и «API Docs».
 // =============================================================================
 
-// Swagger бэкенда живёт по /docs на самом backend (не под /api), поэтому
-// это внешняя ссылка. Адрес настраивается через env, дефолт — локальный бэк.
-const API_DOCS_URL = import.meta.env.VITE_API_DOCS_URL || 'http://localhost:8000/docs';
+// Swagger бэкенда живёт по /docs на самом backend (не под /api), поэтому это
+// внешняя ссылка. Адрес можно переопределить через env (VITE_API_DOCS_URL);
+// дефолт — прод-бэкенд на Render, чтобы ссылка работала на Vercel (где .env не
+// деплоится). Для локальной разработки localhost задаётся в frontend/.env.
+const API_DOCS_URL =
+  import.meta.env.VITE_API_DOCS_URL || 'https://libris-backend-ke58.onrender.com/docs';
 
 export default function Footer() {
   return (
