@@ -3,7 +3,6 @@
 echo "🔧 Настройка окружения Libris..."
 echo ""
 
-# Создание backend/.env
 if [ ! -f backend/.env ]; then
     if [ -f backend/.env.example ]; then
         cp backend/.env.example backend/.env
@@ -15,7 +14,6 @@ else
     echo "⏭️  backend/.env уже существует, пропускаем"
 fi
 
-# Создание frontend/.env
 if [ ! -f frontend/.env ]; then
     if [ -f frontend/.env.example ]; then
         cp frontend/.env.example frontend/.env
@@ -27,7 +25,6 @@ else
     echo "⏭️  frontend/.env уже существует, пропускаем"
 fi
 
-# Генерация SECRET_KEY если он дефолтный
 if grep -q "SECRET_KEY=your-secret-key-here-change-in-production" backend/.env 2>/dev/null; then
     NEW_SECRET=$(openssl rand -hex 32 2>/dev/null || echo "change-me-in-production-$(date +%s)")
     if [[ "$OSTYPE" == "darwin"* ]]; then
