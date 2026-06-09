@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { BookOpen, Bookmark, MessageSquare, Home, Menu, X } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { AvatarCircle } from '../Avatar/Avatar';
+import { useAuth } from '@/context/AuthContext';
+import { AvatarCircle } from '@/components/Avatar/Avatar';
 
 // =============================================================================
 // Шапка сайта: логотип, навигация и кнопка аккаунта (sticky сверху).

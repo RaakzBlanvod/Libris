@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
+import { login as loginRequest, register as registerRequest } from '@/api/auth';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 
 // =============================================================================
 // Страница входа/регистрации (маршрут /login). Один компонент, переключаемый
@@ -26,21 +26,15 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        const bodyFormData = new FormData();
-        bodyFormData.append('username', formData.email);
-        bodyFormData.append('password', formData.password);
-
-        const res = await api.post('/api/v1/auth/login', bodyFormData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-
-        login(res.data.access_token, res.data.refresh_token);
+        // loginRequest сам собирает form-data (username=email) и возвращает токены.
+        const tokens = await loginRequest(formData.email, formData.password);
+        login(tokens.access_token, tokens.refresh_token);
         navigate('/profile');
       } else {
-        await api.post('/api/v1/auth/register', {
+        await registerRequest({
           email: formData.email,
           username: formData.username,
-          password: formData.password
+          password: formData.password,
         });
 
         toast.success('Регистрация прошла успешно! Теперь войдите.');

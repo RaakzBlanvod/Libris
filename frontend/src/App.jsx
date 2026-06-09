@@ -1,20 +1,20 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import Header from './components/Header/Header';
-import Footer from './components/Footer/Footer';
-import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
-import Home from './pages/Home/HomePage';
-import AuthPage from './pages/Auth/AuthPage';
-import Profile from './pages/Profile/ProfilePage';
-import Bookmarks from './pages/Bookmarks/BookmarksPage';
-import BookDetail from './pages/BookDetail/BookDetailPage';
-import { AuthProvider } from './context/AuthContext';
-import { ToastProvider } from './context/ToastContext';
-import { ConfirmProvider } from './context/ConfirmContext';
-import CreateReview from './pages/Reviews/CreateReview';
-import Reviews from './pages/Reviews/ReviewsPage';
-import Terms from './pages/Terms/TermsPage';
-import NotFound from './pages/NotFound/NotFoundPage';
+import Header from '@/components/Header/Header';
+import Footer from '@/components/Footer/Footer';
+import ErrorBoundary from '@/components/ErrorBoundary/ErrorBoundary';
+import Home from '@/pages/Home/HomePage';
+import AuthPage from '@/pages/Auth/AuthPage';
+import Profile from '@/pages/Profile/ProfilePage';
+import Bookmarks from '@/pages/Bookmarks/BookmarksPage';
+import BookDetail from '@/pages/BookDetail/BookDetailPage';
+import { AuthProvider } from '@/context/AuthContext';
+import { ToastProvider } from '@/context/ToastContext';
+import { ConfirmProvider } from '@/context/ConfirmContext';
+import CreateReview from '@/pages/Reviews/CreateReview';
+import Reviews from '@/pages/Reviews/ReviewsPage';
+import Terms from '@/pages/Terms/TermsPage';
+import NotFound from '@/pages/NotFound/NotFoundPage';
 
 // =============================================================================
 // Корень приложения: глобальные провайдеры, роутер и каркас страницы.

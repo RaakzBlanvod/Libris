@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BOOKMARK_STATUS_KEYS, statusLabel, statusEmojiLabel } from './bookmarks';
+import { BOOKMARK_STATUS_KEYS, statusLabel, statusEmojiLabel } from '@/constants/bookmarks';
 
 describe('bookmarks constants', () => {
   it('4 статуса в правильном порядке', () => {

@@ -1,5 +1,39 @@
 import api from './client';
 
+// =============================================================================
+// API рецензий (/api/v1/reviews/*) + хелперы для «докрашивания» лайков.
+// Списочные функции всегда возвращают массив.
+// =============================================================================
+
+const toArray = (r) => (Array.isArray(r.data) ? r.data : []);
+
+// Топ рецензий недели (кэш Redis). В ответе есть book с google_id.
+export const getTrendingReviews = () =>
+  api.get('/api/v1/reviews/trending').then(toArray);
+
+// Рецензии текущего пользователя (с вложенной book).
+export const getMyReviews = () =>
+  api.get('/api/v1/reviews/my').then(toArray);
+
+// Все рецензии конкретной книги (по внутреннему id книги).
+export const getBookReviews = (bookId) =>
+  api.get(`/api/v1/reviews/book/${bookId}`).then(toArray);
+
+// Создать рецензию на книгу (по внутреннему id книги).
+export const createReview = (bookId, data) =>
+  api.post(`/api/v1/reviews/book/${bookId}`, data).then((r) => r.data);
+
+// Обновить свою рецензию.
+export const updateReview = (id, data) =>
+  api.patch(`/api/v1/reviews/${id}`, data).then((r) => r.data);
+
+// Удалить свою рецензию.
+export const removeReview = (id) => api.delete(`/api/v1/reviews/${id}`);
+
+// Переключить лайк рецензии. Возвращает { is_liked }.
+export const toggleLike = (id) =>
+  api.post(`/api/v1/reviews/${id}/like`).then((r) => r.data);
+
 // Тренды рецензий отдаются из кэша Redis, где is_liked всегда false.
 // Эти хелперы позволяют «докрасить» сердечки поверх кэша по списку
 // лайкнутых ID текущего пользователя.

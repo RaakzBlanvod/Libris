@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import api from '../../api/client';
-import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { updateMe, uploadAvatar } from '@/api/users';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 
 // =============================================================================
 // Модалка редактирования профиля (имя, биография, любимые жанры, аватар).
@@ -35,19 +35,15 @@ export default function EditProfileModal({ user, onClose, onUpdate }) {
         .map(s => s.trim())
         .filter(s => s.length > 0);
 
-      await api.patch('/api/v1/users/me', {
+      await updateMe({
         username: formData.username,
         bio: formData.bio,
-        favorite_genres: genres
+        favorite_genres: genres,
       });
 
       // Аватар грузим отдельным multipart-запросом — только если выбрали файл.
       if (avatarFile) {
-        const formDataUpload = new FormData();
-        formDataUpload.append('file', avatarFile);
-        await api.post('/api/v1/users/me/avatar', formDataUpload, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        await uploadAvatar(avatarFile);
       }
 
       onUpdate(); // родитель перезапросит профиль

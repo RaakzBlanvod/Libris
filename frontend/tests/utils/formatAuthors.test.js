@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatAuthors } from './formatAuthors';
+import { formatAuthors } from '@/utils/formatAuthors';
 
 describe('formatAuthors', () => {
   it('массив объектов { name } → строка через запятую', () => {

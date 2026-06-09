@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dockLikes } from './reviews';
+import { dockLikes } from '@/api/reviews';
 
 describe('dockLikes', () => {
   const reviews = [{ id: 1 }, { id: 2 }, { id: 3 }];
