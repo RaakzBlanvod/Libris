@@ -64,7 +64,7 @@ class BookService:
         return books_metadata
 
     @staticmethod
-    async def _fetch_single_google_book(google_id: str) -> GoogleBookMetadata:
+    async def fetch_single_google_book(google_id: str) -> GoogleBookMetadata:
         """
         Получает метаданные конкретной книги из Google Books API.
 
