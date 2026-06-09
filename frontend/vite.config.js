@@ -1,4 +1,6 @@
-import { defineConfig } from 'vite'
+// defineConfig берём из 'vitest/config' — это тот же конфиг Vite, но с типами
+// для блока test (Vitest). На прод-сборку (vite build) блок test не влияет.
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -23,5 +25,17 @@ export default defineConfig({
         rewrite: (path) => path,
       }
     }
-  }
+  },
+  // Конфиг тестов (Vitest):
+  //  - environment: jsdom — эмулируем DOM для компонентных тестов;
+  //  - globals: true — describe/it/expect доступны без импорта (мы всё равно
+  //    импортируем их явно в тестах, чтобы не спорить с ESLint);
+  //  - setupFiles — подключает матчеры @testing-library/jest-dom;
+  //  - css: false — не обрабатываем CSS в тестах (быстрее, Tailwind тут не нужен).
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.js',
+    css: false,
+  },
 })
